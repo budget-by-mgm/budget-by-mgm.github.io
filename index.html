@@ -193,9 +193,10 @@ h1,h2,h3{font-family:var(--font-display);text-wrap:balance;margin:0}
 .tab small{font-weight:600;color:var(--muted);font-size:12px}
 .tab[aria-selected="true"]{background:var(--c);border-color:var(--c);color:var(--on-accent)}
 .tab[aria-selected="true"] small{color:inherit;opacity:.85}
-.slider{display:flex;gap:12px;overflow-x:auto;overflow-y:hidden;transition:height .25s ease;scroll-snap-type:x mandatory;scrollbar-width:none;margin:0 -16px;padding:0 16px;scroll-padding:0 16px;align-items:flex-start;overscroll-behavior-x:contain}
-.slider::-webkit-scrollbar{display:none}
-.panel{flex:0 0 100%;min-width:0;scroll-snap-align:start;scroll-snap-stop:always}
+.slider{overflow:hidden;margin:0 -16px;padding:0 16px;transition:height .25s ease;touch-action:pan-y}
+.track{display:flex;gap:12px;align-items:flex-start;transition:transform .3s cubic-bezier(.2,.8,.2,1);will-change:transform}
+.track.drag{transition:none}
+.panel{flex:0 0 100%;min-width:0}
 .dotsnav{display:flex;justify-content:center;gap:6px;margin-top:-4px}
 .dotsnav span{width:6px;height:6px;border-radius:50%;background:var(--line);transition:width .2s}
 .dotsnav span.on{width:18px;border-radius:999px;background:var(--ink)}
@@ -285,6 +286,20 @@ h1,h2,h3{font-family:var(--font-display);text-wrap:balance;margin:0}
 @media (prefers-reduced-motion: reduce){.payday .emo.fire{animation:none}}
 .payday b{font-family:var(--font-display);font-size:17px;display:block}
 .payday small{color:var(--muted);font-size:13px}
+/* suggestions */
+.fb-item{border-top:1px solid var(--line);padding:10px 0;display:flex;flex-direction:column;gap:6px}
+.fb-item:first-child{border-top:0}
+.fb-item p{margin:0}
+.fb-item .who{font-size:12px;color:var(--muted)}
+.fb-st{display:inline-block;font-size:12px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--bg)}
+.fb-st.a_faire{background:var(--accent-soft);color:var(--accent)}
+.fb-st.fait{background:var(--good-soft);color:var(--good)}
+.fb-st.refuse{background:var(--bad-soft);color:var(--bad)}
+.fb-btns{display:flex;gap:6px;flex-wrap:wrap}
+.fb-btns button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 11px;font-size:13px;font-weight:700}
+.fb-btns button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+textarea.qtext{min-height:110px;resize:vertical;font:inherit}
+.badge{margin-left:auto;background:var(--bad);color:#fff;border-radius:999px;font-size:12px;font-weight:800;padding:1px 8px}
 /* modale */
 .overlay{position:fixed;inset:0;background:rgba(10,14,22,.5);display:flex;align-items:flex-end;justify-content:center;z-index:20}
 .sheet{background:var(--bg);width:100%;max-width:560px;max-height:92%;overflow:auto;border-radius:22px 22px 0 0;padding:18px 16px calc(24px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:14px}
@@ -312,7 +327,7 @@ h1,h2,h3{font-family:var(--font-display);text-wrap:balance;margin:0}
 <div id="modal"></div>
 <div id="toast" class="toast" hidden></div>
 
-<script>window.__APP_VER__="2026.11.19-1612";</script>
+<script>window.__APP_VER__="2026.11.19-1621";</script>
 <script>
 (() => {
 "use strict";
@@ -321,6 +336,7 @@ const APP_VER = window.__APP_VER__ || 'dev';
 const SUPA_URL = 'https://aychipxyiebtmknwskmb.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF5Y2hpcHh5aWVidG1rbndza21iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQ5MTcxMTcsImV4cCI6MjExMDQ5MzExN30.DrSs5Rme7cNcltZ5StDnXoDT25g0mUgX-iF52t7R3D0';
 const EMAIL_DOMAIN = '@bts-ndrc.app';
+const ADMIN_EMAIL = 'gouissemmathys@gmail.com';
 
 const app = document.getElementById('app');
 const modalEl = document.getElementById('modal');
@@ -749,9 +765,9 @@ function renderMain(){
     <nav class="tabs" id="tabs" role="tablist" aria-label="Catégories">
       ${panels.map((p, i) => `<button class="tab" role="tab" id="tab-${esc(p.id)}" style="--c:${p.c}" data-act="panel" data-i="${i}" aria-selected="${i === cur}" aria-controls="pn-${esc(p.id)}">${esc(p.nom)} <small class="num">${fmt(p.tot)}</small></button>`).join('')}
     </nav>
-    <div class="slider" id="slider">
+    <div class="slider" id="slider"><div class="track" id="track">
       ${panels.map((p, i) => `<div class="panel" id="pn-${esc(p.id)}" role="tabpanel" aria-labelledby="tab-${esc(p.id)}" data-pid="${esc(p.id)}">${p.html}</div>`).join('')}
-    </div>
+    </div></div>
     <div class="dotsnav" aria-hidden="true">${panels.map((p, i) => `<span class="${i === cur ? 'on' : ''}"></span>`).join('')}</div>
     ${LS.get('swiped', false) ? '' : '<p class="swipe-hint">Glisse vers le côté pour passer d’une catégorie à l’autre</p>'}
     ${aboCard(c, t)}
@@ -877,6 +893,53 @@ function aboEdit(id){
     </form>`);
 }
 function saveCfg(cfg){ S.cfg = cfg; Docs.save('config', cfg); }
+
+/* ---------- points à améliorer ---------- */
+const FB_TYPES = [['idee', '💡 Idée'], ['bug', '🐞 Bug'], ['pratique', '😕 Pas pratique']];
+const FB_ST = {nouveau: 'Reçu', a_faire: 'Retenu, à faire', refuse: 'Pas retenu', fait: 'Fait 🎉'};
+const isAdmin = () => !!(S.user && S.user.email && S.user.email.toLowerCase() === ADMIN_EMAIL);
+let FB = {type: 'idee'};
+async function fbApi(path, opts){ const u = await session(); if (!u) throw new Error('session'); return api('/rest/v1/budget_feedback' + path, opts || {}, u.token); }
+async function openFeedback(){
+  FB = {type: 'idee'};
+  openModal(`
+    <div class="sheet-h"><h2>Points à améliorer</h2><button class="icon-btn" data-act="close" aria-label="Fermer">×</button></div>
+    <form class="card" id="fb-form" autocomplete="off">
+      <p>Une idée, un bug, un truc pas pratique ? Dis-le ici : ça arrive directement chez le créateur de l’appli.</p>
+      <div class="fb-btns" role="group" aria-label="Type">${FB_TYPES.map(([v, l]) => `<button type="button" data-act="fb-type" data-v="${v}" aria-pressed="${v === FB.type}">${l}</button>`).join('')}</div>
+      <textarea class="qtext" id="fb-txt" maxlength="1000" placeholder="Ex. : j’aimerais pouvoir…" aria-label="Ta suggestion"></textarea>
+      <p class="msg" id="fb-msg" role="status"></p>
+      <button class="btn" type="submit">Envoyer</button>
+    </form>
+    <div class="card" id="fb-mine"><p class="meta">Chargement de tes envois…</p></div>`);
+  try {
+    const rows = await fbApi('?select=id,type,texte,statut,created_at&user_id=eq.' + S.user.id + '&order=created_at.desc');
+    const el = document.getElementById('fb-mine'); if (!el) return;
+    el.innerHTML = rows.length ? `<p><b>Tes envois</b></p>${rows.map(r => `<div class="fb-item"><p>${esc(r.texte)}</p><span><span class="fb-st ${esc(r.statut)}">${esc(FB_ST[r.statut] || r.statut)}</span> <span class="who">${new Date(r.created_at).toLocaleDateString('fr-FR')}</span></span></div>`).join('')}` : '<p class="meta">Tu n’as encore rien envoyé.</p>';
+  } catch(e){ const el = document.getElementById('fb-mine'); if (el) el.innerHTML = isMissingFb(e) ? '<p class="meta">La boîte à idées n’est pas encore ouverte.</p>' : '<p class="meta">Pas de connexion : tes envois s’afficheront plus tard.</p>'; }
+}
+function isMissingFb(e){ const m = norm(e && e.message); return e && (e.code === 'PGRST205' || e.code === '42P01' || m.includes('budget_feedback')); }
+async function openFbAdmin(){
+  openModal(`
+    <div class="sheet-h"><h2>Suggestions reçues</h2><button class="icon-btn" data-act="close" aria-label="Fermer">×</button></div>
+    <div class="fb-btns" role="group" aria-label="Filtrer">${[['nouveau','Nouvelles'],['a_faire','À faire'],['fait','Faites'],['refuse','Pas retenues'],['tout','Tout']].map(([v, l]) => `<button data-act="fb-filter" data-v="${v}" aria-pressed="${(FB.filtre || 'nouveau') === v}">${l}</button>`).join('')}</div>
+    <div class="card" id="fb-list"><div class="spinner" aria-hidden="true"></div></div>`);
+  try {
+    const f = FB.filtre || 'nouveau';
+    const rows = await fbApi('?select=id,email,type,texte,statut,created_at' + (f === 'tout' ? '' : '&statut=eq.' + f) + '&order=created_at.desc&limit=200');
+    const el = document.getElementById('fb-list'); if (!el) return;
+    const tl = t => (FB_TYPES.find(x => x[0] === t) || [, t])[1];
+    el.innerHTML = rows.length ? rows.map(r => `<div class="fb-item">
+      <span class="who">${esc(tl(r.type))} · ${esc(r.email || 'anonyme')} · ${new Date(r.created_at).toLocaleDateString('fr-FR')}</span>
+      <p>${esc(r.texte)}</p>
+      <div class="fb-btns">${[['a_faire', '👍 À faire'], ['refuse', '👎 Pas utile'], ['fait', '✅ Fait']].map(([v, l]) => `<button data-act="fb-set" data-id="${r.id}" data-v="${v}" aria-pressed="${r.statut === v}">${l}</button>`).join('')}<button data-act="fb-del" data-id="${r.id}">🗑</button></div>
+    </div>`).join('') : '<p class="meta">Rien ici pour l’instant.</p>';
+  } catch(e){ const el = document.getElementById('fb-list'); if (el) el.innerHTML = `<p class="meta">${isMissingFb(e) ? 'La table des suggestions n’existe pas encore dans Supabase.' : 'Impossible de charger les suggestions.'}</p>`; }
+}
+async function fbCount(){
+  if (!isAdmin()) return;
+  try { const rows = await fbApi('?select=id&statut=eq.nouveau'); const n = rows.length, el = document.getElementById('fb-badge'); if (el){ el.textContent = n; el.hidden = !n; } } catch(e){}
+}
 
 /* ---------- plus que X jours avant la paye ---------- */
 function paydayBand(c){
@@ -1131,6 +1194,16 @@ modalEl.addEventListener('submit', e => {
     saveCfg(cfg); closeModal(); render(); toast('Abonnement mis à jour'); return;
   }
   if (f.id === 'pin-form'){ e.preventDefault(); return; }
+  if (f.id === 'fb-form'){
+    e.preventDefault();
+    const txt = document.getElementById('fb-txt').value.trim(), msg = document.getElementById('fb-msg'), btn = f.querySelector('button[type=submit]');
+    if (txt.length < 3){ msg.textContent = 'Écris ta suggestion en quelques mots.'; return; }
+    btn.disabled = true; msg.textContent = '';
+    fbApi('', {method: 'POST', headers: {'Prefer': 'return=minimal'}, body: JSON.stringify({user_id: S.user.id, email: S.user.email || null, type: FB.type, texte: txt})})
+      .then(() => { toast('Merci ! Ta suggestion est envoyée.'); openFeedback(); })
+      .catch(err => { btn.disabled = false; msg.textContent = isMissingFb(err) ? 'La boîte à idées n’est pas encore ouverte, réessaie plus tard.' : 'Pas réussi à envoyer. Vérifie ta connexion.'; });
+    return;
+  }
   if (f.id === 'payday-form'){
     e.preventDefault();
     const v = parseInt(document.getElementById('pd-day').value, 10);
@@ -1334,12 +1407,12 @@ async function bioToggle(){
 }
 
 /* ---------- pages qui glissent ---------- */
+let SL = null;
 function setupSlider(cur){
-  const slider = document.getElementById('slider');
-  if (!slider) return;
-  const panels = [...slider.children];
-  const left = i => panels[i].offsetLeft - panels[0].offsetLeft;
-  slider.scrollLeft = left(cur);
+  const slider = document.getElementById('slider'), track = document.getElementById('track');
+  if (!slider || !track) return;
+  const panels = [...track.children];
+  const offset = i => panels[i].offsetLeft - panels[0].offsetLeft;
   const fit = i => { slider.style.height = panels[i].offsetHeight + 'px'; };
   const mark = i => {
     fit(i);
@@ -1349,29 +1422,45 @@ function setupSlider(cur){
     const tb = document.getElementById('tabs'), t = tabs[i];
     if (tb && t){ const x = t.offsetLeft - tb.offsetLeft - 16; tb.scrollTo({left: Math.max(0, x - (tb.clientWidth - t.offsetWidth) / 2 + 16), behavior: 'smooth'}); }
   };
-  mark(cur);
-  let raf = 0;
-  slider.addEventListener('scroll', () => {
-    cancelAnimationFrame(raf);
-    raf = requestAnimationFrame(() => {
-      let best = 0, d = Infinity;
-      panels.forEach((p, i) => { const dd = Math.abs(left(i) - slider.scrollLeft); if (dd < d){ d = dd; best = i; } });
-      const id = panels[best].dataset.pid;
-      if (id !== S.panel){
-        S.panel = id; mark(best);
-        if (!LS.get('swiped', false)){ LS.set('swiped', true); const h = document.querySelector('.swipe-hint'); if (h) h.remove(); }
-      }
-    });
-  }, {passive: true});
+  const go = (i, anim = true) => {
+    i = Math.max(0, Math.min(panels.length - 1, i));
+    SL.i = i;
+    track.classList.toggle('drag', !anim);
+    track.style.transform = `translateX(${-offset(i)}px)`;
+    if (panels[i].dataset.pid !== S.panel){
+      S.panel = panels[i].dataset.pid;
+      if (!LS.get('swiped', false) && anim){ LS.set('swiped', true); const h = document.querySelector('.swipe-hint'); if (h) h.remove(); }
+    }
+    mark(i);
+  };
+  SL = {i: cur, go};
+  go(cur, false);
+  requestAnimationFrame(() => track.classList.remove('drag'));
+  // Un geste = une catégorie, peu importe la vitesse
+  let x0 = 0, y0 = 0, t0 = 0, dx = 0, dir = null;
+  slider.addEventListener('touchstart', e => { const p = e.touches[0]; x0 = p.clientX; y0 = p.clientY; t0 = Date.now(); dx = 0; dir = null; }, {passive: true});
+  slider.addEventListener('touchmove', e => {
+    const p = e.touches[0], mx = p.clientX - x0, my = p.clientY - y0;
+    if (dir === null && (Math.abs(mx) > 8 || Math.abs(my) > 8)) dir = Math.abs(mx) > Math.abs(my) ? 'x' : 'y';
+    if (dir !== 'x') return;
+    e.preventDefault();
+    dx = mx;
+    const edge = (SL.i === 0 && dx > 0) || (SL.i === panels.length - 1 && dx < 0);
+    track.classList.add('drag');
+    track.style.transform = `translateX(${-offset(SL.i) + (edge ? dx / 3 : dx)}px)`;
+  }, {passive: false});
+  slider.addEventListener('touchend', () => {
+    if (dir !== 'x'){ dir = null; return; }
+    const fast = Math.abs(dx) / Math.max(1, Date.now() - t0) > 0.35;
+    const step = (dx < -60 || (fast && dx < -20)) ? 1 : (dx > 60 || (fast && dx > 20)) ? -1 : 0;
+    track.classList.remove('drag');
+    go(SL.i + step);
+    dir = null;
+  });
+  slider.addEventListener('touchcancel', () => { track.classList.remove('drag'); go(SL.i); dir = null; });
+  window.addEventListener('resize', () => { if (SL && document.getElementById('track') === track) go(SL.i, false); });
 }
-function goPanel(i){
-  const slider = document.getElementById('slider');
-  if (!slider) return;
-  const panels = [...slider.children];
-  if (!panels[i]) return;
-  const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
-  slider.scrollTo({left: panels[i].offsetLeft - panels[0].offsetLeft, behavior: reduce ? 'auto' : 'smooth'});
-}
+function goPanel(i){ if (SL) SL.go(i); }
 
 /* ---------- relevé bancaire (facultatif, lu sur le téléphone, rien n'est envoyé) ---------- */
 const bankEl = document.getElementById('bank-file');
@@ -1754,6 +1843,8 @@ function openMenu(){
       <button class="ditem" data-act="slip-menu">${ic('<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/>')}Déposer un bulletin</button>
       <button class="ditem" data-act="bank">${ic('<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h4"/>')}Vérifier avec mon relevé <small style="margin-left:auto;color:var(--muted);font-weight:600;font-size:12px">facultatif</small></button>
       <button class="ditem" data-act="bilan">${ic('<path d="M4 19V5M4 19h16M8 15l3-4 3 2 4-6"/>')}Bilan du mois</button>
+      <button class="ditem" data-act="feedback">${ic('<path d="M12 3a6 6 0 0 0-3.5 10.9V17h7v-3.1A6 6 0 0 0 12 3z"/><path d="M9.5 20h5"/>')}Points à améliorer</button>
+      ${isAdmin() ? `<button class="ditem" data-act="fb-admin">${ic('<path d="M4 4h16v12H7l-3 3z"/>')}Suggestions reçues <span class="badge" id="fb-badge" hidden>0</span></button>` : ''}
       <button class="ditem" data-act="lock-settings">${ic('<rect x="5" y="10" width="14" height="11" rx="2.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>')}Code et Face ID</button>
       <button class="ditem" data-act="install">${ic('<rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/>')}Mettre sur l’écran d’accueil</button>
     </div>
@@ -1771,6 +1862,7 @@ function openMenu(){
     </div>
   </nav></div>`;
   const f = modalEl.querySelector('.icon-btn'); if (f) setTimeout(() => f.focus(), 30);
+  fbCount();
 }
 
 /* ---------- lecture du bulletin (dans le téléphone, sans envoi) ---------- */
@@ -1922,6 +2014,12 @@ document.addEventListener('click', e => {
   if (act === 'menu') return openMenu();
   if (act === 'quick') return openQuick();
   if (act === 'dep-edit') return depEdit(b.dataset.id);
+  if (act === 'feedback') return openFeedback();
+  if (act === 'fb-type'){ FB.type = b.dataset.v; modalEl.querySelectorAll('[data-act="fb-type"]').forEach(x => x.setAttribute('aria-pressed', x.dataset.v === FB.type)); return; }
+  if (act === 'fb-admin') return openFbAdmin();
+  if (act === 'fb-filter'){ FB.filtre = b.dataset.v; return openFbAdmin(); }
+  if (act === 'fb-set'){ fbApi('?id=eq.' + b.dataset.id, {method: 'PATCH', headers: {'Prefer': 'return=minimal'}, body: JSON.stringify({statut: b.dataset.v})}).then(() => { toast(FB_ST[b.dataset.v]); openFbAdmin(); }).catch(() => toast('Pas réussi, réessaie.')); return; }
+  if (act === 'fb-del'){ fbApi('?id=eq.' + b.dataset.id, {method: 'DELETE'}).then(() => { toast('Suggestion supprimée'); openFbAdmin(); }).catch(() => toast('Pas réussi, réessaie.')); return; }
   if (act === 'payday-set') return paydaySheet();
   if (act === 'spend-detail') return spendDetail();
   if (act === 'goal-new') return goalSheet(null);
