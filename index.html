@@ -72,7 +72,8 @@ h1,h2,h3{font-family:var(--font-display);text-wrap:balance;margin:0}
 .num{font-variant-numeric:tabular-nums}
 .top{display:flex;align-items:center;gap:12px}
 .months{display:flex;align-items:center;gap:6px}
-.months h1{font-size:24px;font-weight:700;letter-spacing:-.01em}
+.months h1{font-size:21px;font-weight:700;letter-spacing:-.01em;white-space:nowrap}
+.months h1 small{font-size:15px;font-weight:600;color:var(--muted)}
 .eyebrow{margin:0;font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
 .icon-btn{width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:var(--surface);font-size:18px;line-height:1;display:grid;place-items:center;flex:none}
 .ghost{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:8px 14px;font-weight:600;font-size:14px}
@@ -192,7 +193,7 @@ h1,h2,h3{font-family:var(--font-display);text-wrap:balance;margin:0}
 .tab small{font-weight:600;color:var(--muted);font-size:12px}
 .tab[aria-selected="true"]{background:var(--c);border-color:var(--c);color:var(--on-accent)}
 .tab[aria-selected="true"] small{color:inherit;opacity:.85}
-.slider{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;margin:0 -16px;padding:0 16px;scroll-padding:0 16px;align-items:flex-start;overscroll-behavior-x:contain}
+.slider{display:flex;gap:12px;overflow-x:auto;overflow-y:hidden;transition:height .25s ease;scroll-snap-type:x mandatory;scrollbar-width:none;margin:0 -16px;padding:0 16px;scroll-padding:0 16px;align-items:flex-start;overscroll-behavior-x:contain}
 .slider::-webkit-scrollbar{display:none}
 .panel{flex:0 0 100%;min-width:0;scroll-snap-align:start;scroll-snap-stop:always}
 .dotsnav{display:flex;justify-content:center;gap:6px;margin-top:-4px}
@@ -266,7 +267,7 @@ h1,h2,h3{font-family:var(--font-display);text-wrap:balance;margin:0}
 .spinner{width:34px;height:34px;border-radius:50%;border:4px solid var(--accent-soft);border-top-color:var(--accent);animation:spin .9s linear infinite;margin:6px auto}
 @keyframes spin{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion: reduce){.spinner{animation-duration:3s}.meter span{transition:none}}
-.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;font-weight:600;z-index:30;max-width:calc(100% - 32px)}
+.toast{position:fixed;left:50%;top:calc(14px + env(safe-area-inset-top));transform:translateX(-50%);box-shadow:0 8px 24px rgba(0,0,0,.2);text-align:center;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;font-weight:600;z-index:30;max-width:calc(100% - 32px)}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 </style>
 </head>
@@ -281,7 +282,7 @@ h1,h2,h3{font-family:var(--font-display);text-wrap:balance;margin:0}
 <div id="modal"></div>
 <div id="toast" class="toast" hidden></div>
 
-<script>window.__APP_VER__="2026.11.19-1600";</script>
+<script>window.__APP_VER__="2026.11.19-1604";</script>
 <script>
 (() => {
 "use strict";
@@ -308,7 +309,7 @@ function parseAmt(s){
   const n = Number(s);
   return isFinite(n) ? Math.round(n * 100) / 100 : NaN;
 }
-const amtVal = n => (n == null ? '' : String(n).replace('.', ','));
+const amtVal = n => (n == null ? '' : (Number.isInteger(n) ? String(n) : Number(n).toFixed(2).replace('.', ',')));
 function monthKey(d){ return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); }
 function shiftKey(k, delta){ const [y, m] = k.split('-').map(Number); return monthKey(new Date(y, m - 1 + delta, 1)); }
 function monthLabel(k, withYear = true){
@@ -377,7 +378,7 @@ async function session(){
 function friendly(msg){
   const m = norm(msg);
   if (m.includes('already') || m.includes('duplicate') || m.includes('registered')) return 'Ce pseudo est déjà pris. Choisis-en un autre.';
-  if (m.includes('invalid login') || m.includes('invalid credentials')) return 'Pseudo ou mot de passe incorrect.';
+  if (m.includes('invalid login') || m.includes('invalid credentials')) return 'E-mail ou mot de passe incorrect.';
   if (m.includes('password')) return 'Le mot de passe doit faire au moins 6 caractères.';
   if (m.includes('failed to fetch') || m.includes('network') || m.includes('load failed')) return 'Pas de connexion internet.';
   return msg;
@@ -611,7 +612,7 @@ function renderHero(){
   const pct = t.dispo > 0 ? Math.min(100, Math.round(t.depenses / t.dispo * 100)) : (t.depenses > 0 ? 100 : 0);
   el.className = 'hero' + (neg ? ' neg' : '');
   el.innerHTML = `
-    <p class="hero-k">Reste en ${esc(monthLabel(S.monKey, false).toLowerCase())} ${t.estime ? '<span class="pill">estimé</span>' : ''}</p>
+    <p class="hero-k">Reste en ${esc(monthLabel(S.monKey, false).toLowerCase())}</p>
     <p class="big num">${fmt(t.reste)}</p>
     <div class="meter" role="img" aria-label="${pct}% de l’argent disponible déjà dépensé"><span class="${t.depenses > t.dispo ? 'over' : ''}" style="width:${pct}%"></span></div>
     <p class="hero-sub">Après les fixes et abonnements il te restait <strong class="num">${fmt(t.dispo)}</strong>. Tu as déjà dépensé <strong class="num">${fmt(t.depenses)}</strong>.</p>
@@ -628,7 +629,7 @@ function header(){
         <p class="eyebrow">Budget by MGM</p>
         <div class="months">
           <button class="icon-btn" data-act="prev" aria-label="Mois précédent">‹</button>
-          <h1>${esc(monthLabel(S.monKey))}</h1>
+          <h1>${esc(monthLabel(S.monKey, false))} <small>${S.monKey.slice(0, 4)}</small></h1>
           <button class="icon-btn" data-act="next" aria-label="Mois suivant">›</button>
         </div>
       </div>
@@ -749,6 +750,7 @@ function startWizard(cfg){
 }
 function groupItems(g){ return [...GROUPS[g].items, ...W.custom[g]]; }
 function drawWizard(){
+  const fab = document.getElementById('fab'); if (fab) fab.hidden = true;
   const stepBar = `<div class="steps" aria-label="Étape ${W.step} sur 2"><span class="on"></span><span class="${W.step === 2 ? 'on' : ''}"></span></div>`;
   if (W.step === 1){
     app.innerHTML = `
@@ -1068,7 +1070,9 @@ function setupSlider(cur){
   const panels = [...slider.children];
   const left = i => panels[i].offsetLeft - panels[0].offsetLeft;
   slider.scrollLeft = left(cur);
+  const fit = i => { slider.style.height = panels[i].offsetHeight + 'px'; };
   const mark = i => {
+    fit(i);
     const tabs = document.querySelectorAll('#tabs .tab');
     tabs.forEach((t, j) => t.setAttribute('aria-selected', j === i));
     document.querySelectorAll('.dotsnav span').forEach((d, j) => d.classList.toggle('on', j === i));
@@ -1317,7 +1321,7 @@ function analyseBank(ops){
     g.items.push(x.i);
   });
   const ABO_RE = /(abonnement|subscription|netflix|spotify|deezer|disney|canal ?\+|canalplus|prime video|amazon prime|amzn prime|youtube|apple\.com|itunes|google play|google one|playstation|psn|xbox|game ?pass|nintendo|basic ?fit|fitness park|keep ?cool|on air|sfr|orange|bouygues|free mobile|free telecom|sosh|red by|b&you|crunchyroll|molotov|chatgpt|openai|icloud|dropbox|adobe|microsoft|uber one|deliveroo plus|tinder|bumble|audible|kindle)/;
-  items.forEach(x => { if (!x.noted && !x.exclu && ABO_RE.test(norm(x.label))) x.nouvelAbo = true; });
+  items.forEach(x => { if (!x.noted && !x.exclu && ABO_RE.test(norm(x.label))){ x.nouvelAbo = true; x.pick = false; } });
   const months = {}; debits.forEach(o => { months[o.date.key] = (months[o.date.key] || 0) + 1; });
   return {months, items, other, total: inMonth.reduce((s, o) => s + o.v, 0), questions: Object.values(groups), q: 0, remember: true};
 }
@@ -1394,7 +1398,7 @@ function bankResult(){
       <div class="bk-list">${todo.map(x => `
         <div class="bk-row">
           <input type="checkbox" id="bk-${x.i}" data-bk="${x.i}" ${x.pick ? 'checked' : ''} aria-label="Ajouter ${esc(x.nom)}">
-          <label class="l" for="bk-${x.i}">${esc(x.nom)}${x.doute ? ' <span class="pill" style="background:var(--warn-soft);color:var(--ink)">à vérifier</span>' : ''}<small>${esc(x.date.label)} · ${esc(x.label.slice(0, 50))}</small></label>
+          <label class="l" for="bk-${x.i}">${esc(x.nom)}${x.doute ? ' <span class="pill" style="background:var(--warn-soft);color:var(--ink)">à vérifier</span>' : ''}${x.nouvelAbo ? ' <span class="pill" style="background:var(--sub-soft);color:var(--ink)">abonnement ?</span>' : ''}<small>${esc(x.date.label)} · ${esc(x.label.slice(0, 50))}</small></label>
           <b class="num">${fmt(x.v)}</b>
           ${S.cfg.cats.length ? `<select data-bkcat="${x.i}" aria-label="Catégorie pour ${esc(x.nom)}">${opts(x.cat)}</select>` : ''}
         </div>`).join('')}</div>` : (r.items.length ? '<p>Tout est déjà noté, rien n’a été oublié.</p>' : '')}
