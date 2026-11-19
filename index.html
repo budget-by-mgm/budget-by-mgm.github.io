@@ -275,7 +275,7 @@ h1,h2,h3{font-family:var(--font-display);text-wrap:balance;margin:0}
 <div id="modal"></div>
 <div id="toast" class="toast" hidden></div>
 
-<script>window.__APP_VER__="2026.11.19-1546";</script>
+<script>window.__APP_VER__="2026.11.19-1551";</script>
 <script>
 (() => {
 "use strict";
@@ -1301,7 +1301,16 @@ function bankQuestion(){
       <p class="eyebrow">${esc(d[2])}</p>
       <p style="font-family:var(--font-display);font-size:22px;font-weight:800;line-height:1.15">${esc(cleanLabel(its[0].label))}</p>
       <p class="meta">${its.map(x => esc(x.date.label) + ' · ' + fmt(x.v)).join(' · ')}${its.length > 1 ? ' · total ' + fmt(tot) : ''}</p>
-      <p class="meta">${esc(its[0].label.slice(0, 70))}</p>
+      <details class="bk-ok" style="background:var(--bg);border-radius:12px;padding:4px 12px">
+        <summary>Voir ${its.length > 1 ? 'les ' + its.length + ' opérations' : 'l’opération'}</summary>
+        ${its.map(x => {
+          const sameDay = (BANK_OPS || []).filter(o => o !== x && o.date.key === x.date.key && o.date.label === x.date.label && !(o.label === x.label && o.v === x.v));
+          return `<div style="padding:8px 0;border-top:1px solid var(--line)">
+            <p style="font-weight:700;color:var(--ink)">${esc(x.label)}</p>
+            <p>${esc(x.date.label)} · <b class="num" style="color:var(--bad)">− ${fmt(x.v)}</b>${BANK_FILES.length > 1 && BANK_FILES[x.f] ? ' · relevé ' + esc(BANK_FILES[x.f]) : ''}</p>
+            ${sameDay.length ? `<p style="margin-top:6px">Le même jour sur ${BANK_FILES.length > 1 ? 'tes relevés' : 'ton relevé'} :</p><ul style="margin:4px 0 0;padding-left:18px">${sameDay.slice(0, 8).map(o => `<li>${esc(o.label.slice(0, 60))} · <span class="num" style="color:${o.debit ? 'var(--bad)' : 'var(--good)'}">${o.debit ? '−' : '+'} ${fmt(o.v)}</span>${BANK_FILES.length > 1 && BANK_FILES[o.f] ? ' · ' + esc(BANK_FILES[o.f]) : ''}</li>`).join('')}</ul>` : ''}
+          </div>`; }).join('')}
+      </details>
       <p>${esc(d[3])}</p>
       <div style="display:flex;flex-direction:column;gap:8px">
         ${d[4].map(([v, l], j) => `<button class="btn${j ? ' light' : ''}" data-act="bank-answer" data-v="${v}">${esc(l)}</button>`).join('')}
