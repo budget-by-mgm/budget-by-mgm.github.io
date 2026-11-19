@@ -213,6 +213,40 @@ h1,h2,h3{font-family:var(--font-display);text-wrap:balance;margin:0}
 .bk-ok{font-size:13px;color:var(--muted)}
 .bk-ok summary{cursor:pointer;font-weight:700;color:var(--ink);padding:6px 0}
 .bk-ok li{padding:3px 0}
+/* bouton + flottant */
+.fab{position:fixed;right:max(18px, env(safe-area-inset-right));bottom:calc(20px + env(safe-area-inset-bottom));width:60px;height:60px;border-radius:20px;border:0;background:var(--accent);color:var(--on-accent);box-shadow:0 8px 24px rgba(20,30,60,.28);display:grid;place-items:center;z-index:15}
+.fab:active{transform:scale(.96)}
+.wrap{padding-bottom:110px}
+.perday{margin:0;font-size:12px;color:var(--muted)}
+.qcats{display:flex;flex-wrap:wrap;gap:8px}
+.qtext{border:1px solid var(--line);background:var(--bg);border-radius:12px;padding:12px;font-size:16px;width:100%}
+/* abonnements */
+.abo-row{display:flex;align-items:center;gap:10px;padding:8px 0;border:0;background:none;width:100%;text-align:left;border-top:1px solid var(--line);min-height:52px}
+.abo-row:first-of-type{border-top:0}
+.abo-ic{width:36px;height:36px;border-radius:10px;background:var(--sub-soft);color:var(--sub);display:grid;place-items:center;font-weight:800;font-family:var(--font-display);flex:none}
+.abo-row .l{flex:1;min-width:0;font-weight:600}
+.abo-row .l small{display:block;font-weight:500;color:var(--muted);font-size:12px}
+.abo-row .soon{color:var(--sub);font-weight:700}
+.abo-year{display:flex;justify-content:space-between;align-items:baseline;background:var(--sub-soft);border-radius:12px;padding:10px 12px;margin:4px 0 6px;font-size:14px}
+.abo-year b{font-family:var(--font-display);font-size:20px}
+/* recherche */
+.sres{display:flex;flex-direction:column}
+.sres button{display:flex;gap:10px;align-items:center;border:0;background:none;text-align:left;padding:10px 0;border-top:1px solid var(--line);width:100%}
+.sres button:first-child{border-top:0}
+.sres .l{flex:1;min-width:0;font-weight:600}
+.sres .l small{display:block;color:var(--muted);font-weight:500;font-size:12px}
+/* verrouillage */
+#lock{position:fixed;inset:0;z-index:60;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:24px}
+#lock h2{font-size:24px;font-weight:800}
+#lock p{margin:0;color:var(--muted);text-align:center}
+.pdots{display:flex;gap:16px}
+.pdots span{width:16px;height:16px;border-radius:50%;border:2px solid var(--ink)}
+.pdots span.on{background:var(--ink)}
+.pdots.shake{animation:shake .35s}
+@keyframes shake{25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+.keypad{display:grid;grid-template-columns:repeat(3,72px);gap:14px}
+.keypad button{width:72px;height:72px;border-radius:50%;border:0;background:var(--surface);font-family:var(--font-display);font-size:28px;font-weight:700;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.keypad button.ghostk{background:none;box-shadow:none;font-size:15px;font-family:var(--font-body);font-weight:600}
 /* modale */
 .overlay{position:fixed;inset:0;background:rgba(10,14,22,.5);display:flex;align-items:flex-end;justify-content:center;z-index:20}
 .sheet{background:var(--bg);width:100%;max-width:560px;max-height:92%;overflow:auto;border-radius:22px 22px 0 0;padding:18px 16px calc(24px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:14px}
@@ -235,10 +269,12 @@ h1,h2,h3{font-family:var(--font-display);text-wrap:balance;margin:0}
 </main>
 <input type="file" id="file" class="sr" accept="image/*,application/pdf" aria-label="Choisir le bulletin de salaire">
 <input type="file" id="bank-file" class="sr" multiple accept="application/pdf,.pdf,.csv,text/csv" aria-label="Choisir le relevé bancaire">
+<button id="fab" class="fab" data-act="quick" aria-label="Ajouter une dépense" hidden><svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+<div id="lock" hidden></div>
 <div id="modal"></div>
 <div id="toast" class="toast" hidden></div>
 
-<script>window.__APP_VER__="2026.11.19-1535";</script>
+<script>window.__APP_VER__="2026.11.19-1544";</script>
 <script>
 (() => {
 "use strict";
@@ -435,54 +471,93 @@ function upgradeCfg(c){
 
 /* ---------- connexion ---------- */
 function slug(p){ return norm(p).replace(/[^a-z0-9_.-]/g, ''); }
+const SITE = 'https://budget-by-mgm.github.io/';
+let AUTH_MODE = 'login'; // login | signup | forgot | newpass
+let RECOVERY = null;
+function saveSession(d, pseudo){
+  const u = {pseudo, email: d.user && d.user.email, id: d.user.id, token: d.access_token, refresh: d.refresh_token, exp: Date.now() + (d.expires_in || 3600) * 1000};
+  LS.set('user', u); S.user = u; afterLogin();
+}
+function nameFromEmail(e){ const n = String(e || '').split('@')[0]; return n.charAt(0).toUpperCase() + n.slice(1); }
 function renderAuth(){
+  const m = AUTH_MODE;
+  const titles = {login: 'Me connecter', signup: 'Créer mon compte', forgot: 'Mot de passe oublié', newpass: 'Nouveau mot de passe'};
   app.innerHTML = `
     <section class="auth">
       <div><p class="eyebrow">Budget by MGM</p><h1>Ton budget,<br><span>dans ta poche.</span></h1></div>
-      <p class="lead">Connecte-toi pour retrouver ton budget sur tous tes appareils. Tu peux utiliser le même compte que l’appli de révision.</p>
+      <p class="lead">${m === 'forgot' ? 'Tape ton adresse e-mail : tu vas recevoir un lien pour choisir un nouveau mot de passe.' : m === 'newpass' ? 'Choisis ton nouveau mot de passe.' : 'Connecte-toi pour retrouver ton budget sur tous tes appareils.'}</p>
       <form class="card" id="auth-form" autocomplete="on">
-        <div class="field"><label for="ps">Pseudo</label><input id="ps" maxlength="20" autocomplete="username" autocapitalize="none" spellcheck="false"><small>3 à 20 caractères : lettres, chiffres, _ . -</small></div>
-        <div class="field"><label for="pw">Mot de passe</label><input id="pw" type="password" autocomplete="current-password"><small>6 caractères minimum</small></div>
+        <h2 style="font-size:20px">${titles[m]}</h2>
+        ${m !== 'newpass' ? `<div class="field"><label for="em">Adresse e-mail</label><input id="em" type="${m === 'login' ? 'text' : 'email'}" inputmode="email" autocomplete="email" autocapitalize="none" spellcheck="false" placeholder="toi@exemple.fr">${m === 'login' ? '<small>Ancien compte avec un pseudo ? Tape ton pseudo ici.</small>' : ''}</div>` : ''}
+        ${m !== 'forgot' ? `<div class="field"><label for="pw">${m === 'newpass' ? 'Nouveau mot de passe' : 'Mot de passe'}</label><input id="pw" type="password" autocomplete="${m === 'login' ? 'current-password' : 'new-password'}"><small>6 caractères minimum</small></div>` : ''}
+        ${m === 'signup' || m === 'newpass' ? `<div class="field"><label for="pw2">Confirme le mot de passe</label><input id="pw2" type="password" autocomplete="new-password"></div>` : ''}
         <p class="msg" id="msg" role="status"></p>
-        <div class="actions"><button class="btn" type="submit" id="signin" style="flex:1">Me connecter</button><button class="btn light" type="button" id="signup" style="flex:1">Créer mon compte</button></div>
+        <button class="btn" type="submit" id="go">${titles[m]}</button>
+        ${m === 'login' ? `<button class="btn link" type="button" data-auth="forgot" style="align-self:flex-start;padding:4px 0">Mot de passe oublié ?</button>` : ''}
       </form>
+      ${m === 'login' ? `<button class="btn light" data-auth="signup">Pas encore de compte ? Créer mon compte</button>`
+        : m === 'newpass' ? '' : `<button class="btn light" data-auth="login">J’ai déjà un compte : me connecter</button>`}
       <p class="note">Ton budget est privé : personne d’autre ne peut le voir.</p>
     </section>`;
   const $ = id => document.getElementById(id);
-  const msg = t => { $('msg').textContent = t; };
-  const read = () => {
-    const p = $('ps').value.trim(), pw = $('pw').value, s = slug(p);
-    if (s.length < 3 || s.length > 20 || s !== p.toLowerCase()){ msg('Pseudo invalide : 3 à 20 caractères, lettres sans accent, chiffres, _ . -'); return null; }
-    if (pw.length < 6){ msg('Le mot de passe doit faire au moins 6 caractères.'); return null; }
-    return {p, s, pw, email: s + EMAIL_DOMAIN};
-  };
-  const busy = b => { $('signin').disabled = b; $('signup').disabled = b; };
-  const done = (d, pseudo) => {
-    const u = {pseudo, id: d.user.id, token: d.access_token, refresh: d.refresh_token, exp: Date.now() + d.expires_in * 1000};
-    LS.set('user', u); S.user = u; afterLogin();
-  };
+  const msg = (t, ok) => { const el = $('msg'); el.textContent = t; el.style.color = ok ? 'var(--good)' : ''; };
+  app.querySelectorAll('[data-auth]').forEach(x => x.addEventListener('click', () => { AUTH_MODE = x.dataset.auth; const keep = $('em') && $('em').value; renderAuth(); if (keep && $('em')) $('em').value = keep; }));
   $('auth-form').addEventListener('submit', async e => {
     e.preventDefault();
-    const f = read(); if (!f) return; msg(''); busy(true);
+    const go = $('go'); const busy = v => { go.disabled = v; };
+    const raw = $('em') ? $('em').value.trim().toLowerCase() : '';
+    const pw = $('pw') ? $('pw').value : '', pw2 = $('pw2') ? $('pw2').value : '';
+    const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(raw);
+    if (m !== 'newpass' && !raw) return msg('Tape ton adresse e-mail.');
+    if ((m === 'signup' || m === 'forgot') && !isEmail) return msg('Cette adresse e-mail n’a pas l’air valide.');
+    if (m !== 'forgot' && pw.length < 6) return msg('Le mot de passe doit faire au moins 6 caractères.');
+    if ((m === 'signup' || m === 'newpass') && pw !== pw2) return msg('Les deux mots de passe ne sont pas pareils.');
+    msg(''); busy(true);
     try {
-      const d = await api('/auth/v1/token?grant_type=password', {method: 'POST', body: JSON.stringify({email: f.email, password: f.pw})});
-      let pseudo = f.p;
-      try { const rows = await api('/rest/v1/profiles?select=pseudo&id=eq.' + d.user.id, {}, d.access_token); if (rows && rows[0]) pseudo = rows[0].pseudo; } catch(e){}
-      done(d, pseudo);
-    } catch(err){ msg(friendly(err.message)); busy(false); }
-  });
-  $('signup').addEventListener('click', async () => {
-    const f = read(); if (!f) return; msg('Création du compte…'); busy(true);
-    try {
-      const d = await api('/auth/v1/signup', {method: 'POST', body: JSON.stringify({email: f.email, password: f.pw})});
-      if (!d.access_token) throw new Error('Compte créé, mais la confirmation par e-mail est activée dans Supabase.');
-      try { await api('/rest/v1/profiles', {method: 'POST', headers: {'Prefer': 'return=minimal'}, body: JSON.stringify({id: d.user.id, pseudo: f.p})}, d.access_token); } catch(e){}
-      done(d, f.p);
-    } catch(err){ msg(friendly(err.message)); busy(false); }
+      if (m === 'login'){
+        let email = raw, legacy = false;
+        if (!raw.includes('@')){ const sl = slug(raw); if (sl.length < 3){ busy(false); return msg('Tape ton adresse e-mail.'); } email = sl + EMAIL_DOMAIN; legacy = true; }
+        const d = await api('/auth/v1/token?grant_type=password', {method: 'POST', body: JSON.stringify({email, password: pw})});
+        let pseudo = legacy ? raw : nameFromEmail(email);
+        if (legacy){ try { const rows = await api('/rest/v1/profiles?select=pseudo&id=eq.' + d.user.id, {}, d.access_token); if (rows && rows[0]) pseudo = rows[0].pseudo; } catch(e){} }
+        else if (d.user && d.user.user_metadata && d.user.user_metadata.prenom) pseudo = d.user.user_metadata.prenom;
+        saveSession(d, pseudo);
+      } else if (m === 'signup'){
+        const d = await api('/auth/v1/signup?redirect_to=' + encodeURIComponent(SITE), {method: 'POST', body: JSON.stringify({email: raw, password: pw, data: {prenom: nameFromEmail(raw)}})});
+        if (d.access_token) saveSession(d, nameFromEmail(raw));
+        else { busy(false); msg('Compte créé ! Ouvre l’e-mail qu’on vient de t’envoyer et clique sur le lien pour l’activer.', true); }
+      } else if (m === 'forgot'){
+        if (raw.endsWith(EMAIL_DOMAIN)){ busy(false); return msg('Les anciens comptes avec pseudo n’ont pas d’e-mail : crée un compte avec ton adresse.'); }
+        await api('/auth/v1/recover?redirect_to=' + encodeURIComponent(SITE), {method: 'POST', body: JSON.stringify({email: raw})});
+        busy(false); msg('C’est envoyé ! Regarde tes e-mails (et les spams) et clique sur le lien.', true);
+      } else if (m === 'newpass'){
+        const d = await api('/auth/v1/user', {method: 'PUT', body: JSON.stringify({password: pw})}, RECOVERY.access_token);
+        AUTH_MODE = 'login';
+        saveSession({...RECOVERY, user: d}, nameFromEmail(d.email));
+        RECOVERY = null; toast('Mot de passe changé');
+      }
+    } catch(err){
+      busy(false);
+      const t = norm(err.message);
+      if (t.includes('rate limit') || err.status === 429) msg('Trop d’e-mails envoyés d’un coup. Réessaie dans une heure.');
+      else if (t.includes('not confirmed')) msg('Ton adresse n’est pas encore confirmée : clique sur le lien reçu par e-mail.');
+      else msg(friendly(err.message).replace('Ce pseudo est déjà pris. Choisis-en un autre.', 'Un compte existe déjà avec cette adresse. Connecte-toi.'));
+    }
   });
 }
+// Retour depuis un lien reçu par e-mail (confirmation ou mot de passe oublié)
+function readAuthHash(){
+  const h = location.hash.replace(/^#/, '');
+  if (!/access_token=|error_description=/.test(h)) return;
+  const q = new URLSearchParams(h);
+  history.replaceState(null, '', location.pathname);
+  if (q.get('error_description')){ AUTH_MODE = 'login'; setTimeout(() => toast('Le lien a expiré ou a déjà servi. Redemande-en un.'), 300); return; }
+  const d = {access_token: q.get('access_token'), refresh_token: q.get('refresh_token'), expires_in: +q.get('expires_in') || 3600};
+  if (q.get('type') === 'recovery'){ RECOVERY = d; AUTH_MODE = 'newpass'; LS.set('user', null); return; }
+  return api('/auth/v1/user', {}, d.access_token).then(u => saveSession({...d, user: u}, (u.user_metadata && u.user_metadata.prenom) || nameFromEmail(u.email))).catch(() => {});
+}
 function afterLogin(){ S.view = 'main'; S.err = null; S.monKey = CUR; loadCfg(); loadMon(); Docs.flushAll(); render(); }
-function logout(){ LS.set('user', null); S.user = null; S.cfg = null; S.mon = null; S.view = 'auth'; closeModal(); render(); }
+function logout(){ AUTH_MODE = 'login'; LS.set('user', null); S.user = null; S.cfg = null; S.mon = null; S.view = 'auth'; closeModal(); render(); }
 
 /* ---------- calculs ---------- */
 function mon(){ const m = S.mon || {}; return {entrees: {}, fixesReel: {}, depenses: [], ...m}; }
@@ -500,8 +575,9 @@ function totals(){
 }
 
 /* ---------- rendu ---------- */
-function inputFocused(){ const a = document.activeElement; return a && a.tagName === 'INPUT' && app.contains(a) && a.id !== 'ps' && a.id !== 'pw'; }
+function inputFocused(){ const a = document.activeElement; return a && a.tagName === 'INPUT' && app.contains(a) && a.id !== 'em' && a.id !== 'pw' && a.id !== 'pw2'; }
 function render(){
+  const fab = document.getElementById('fab'); if (fab) fab.hidden = !(S.view === 'main' && S.cfg && S.user && S.monLoaded);
   if (S.view === 'auth'){ renderAuth(); return; }
   if (S.view === 'wizard'){ return; }
   if (inputFocused()){ S.needRender = true; renderHero(); return; }
@@ -531,7 +607,9 @@ function renderHero(){
     <p class="hero-k">Reste en ${esc(monthLabel(S.monKey, false).toLowerCase())} ${t.estime ? '<span class="pill">estimé</span>' : ''}</p>
     <p class="big num">${fmt(t.reste)}</p>
     <div class="meter" role="img" aria-label="${pct}% de l’argent disponible déjà dépensé"><span class="${t.depenses > t.dispo ? 'over' : ''}" style="width:${pct}%"></span></div>
-    <p class="hero-sub">Après les fixes et abonnements il te restait <strong class="num">${fmt(t.dispo)}</strong>. Tu as déjà dépensé <strong class="num">${fmt(t.depenses)}</strong>.</p>`;
+    <p class="hero-sub">Après les fixes et abonnements il te restait <strong class="num">${fmt(t.dispo)}</strong>. Tu as déjà dépensé <strong class="num">${fmt(t.depenses)}</strong>.</p>
+    ${(() => { if (S.monKey !== CUR || t.reste <= 0) return ''; const n = new Date(), last = new Date(n.getFullYear(), n.getMonth() + 1, 0).getDate(), days = last - n.getDate() + 1;
+      return `<p class="perday">soit ${fmt(t.reste / days)} par jour jusqu’au ${last}</p>`; })()}`;
 }
 
 function header(){
@@ -547,6 +625,7 @@ function header(){
           <button class="icon-btn" data-act="next" aria-label="Mois suivant">›</button>
         </div>
       </div>
+      <button class="burger" data-act="search" aria-label="Rechercher une dépense"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4-4"/></svg></button>
     </header>
     ${!isCur ? `<button class="btn light" data-act="today">Revenir à ${esc(monthLabel(CUR, false).toLowerCase())}</button>` : ''}
     ${S.offline ? `<p class="warn">Hors ligne : tes changements sont gardés sur ton téléphone et seront envoyés dès que tu auras du réseau.</p>` : ''}`;
@@ -596,11 +675,6 @@ function renderMain(){
         <input class="cell" id="fx-${esc(f.id)}" inputmode="decimal" autocomplete="off" data-field="fixe" data-id="${esc(f.id)}" value="${esc(amtVal(m.fixesReel[f.id]))}" placeholder="${esc(amtVal(f.prevu ?? 0))}" aria-label="${esc(f.nom)} réel">
       </div>`).join('')}
     </section>`});
-  if (c.abos.length) panels.push({id: 'abos', nom: 'Abonnements', c: 'var(--sub)', tot: t.abos, html: `
-    <section class="sec" style="--c:var(--sub)" aria-labelledby="h-ab">
-      <div class="sec-h"><h2 id="h-ab">Abonnements</h2><span class="tot num">${fmt(t.abos)}</span></div>
-      ${c.abos.map(a => `<div class="row"><span class="lbl">${esc(a.nom)}</span><span class="dots"></span><span class="fixed-amt num">${fmt(a.montant)}</span></div>`).join('')}
-    </section>`});
   c.cats.forEach((k, i) => {
     const list = deps.filter(d => d.cat === k.id);
     const tot = list.reduce((s, d) => s + (d.montant || 0), 0);
@@ -640,6 +714,7 @@ function renderMain(){
     </div>
     <div class="dotsnav" aria-hidden="true">${panels.map((p, i) => `<span class="${i === cur ? 'on' : ''}"></span>`).join('')}</div>
     ${LS.get('swiped', false) ? '' : '<p class="swipe-hint">Glisse vers le côté pour passer d’une catégorie à l’autre</p>'}
+    ${aboCard(c, t)}
     <p class="note">Connecté en tant que <b>${esc(S.user.pseudo)}</b>. Ton budget est privé.</p>`;
   setupSlider(cur);
   renderHero();
@@ -722,6 +797,252 @@ app.addEventListener('input', e => {
   if (W && S.view === 'wizard' && el.dataset.amt){ W.amounts[el.dataset.amt] = parseAmt(el.value); }
 });
 
+/* ---------- abonnements intelligents ---------- */
+function nextDebit(jour){
+  if (!jour) return null;
+  const n = new Date(); n.setHours(0, 0, 0, 0);
+  const mk = (y, m) => new Date(y, m, Math.min(jour, new Date(y, m + 1, 0).getDate()));
+  let d = mk(n.getFullYear(), n.getMonth());
+  if (d < n) d = mk(n.getFullYear(), n.getMonth() + 1);
+  return Math.round((d - n) / 864e5);
+}
+function aboCard(c, t){
+  if (!c.abos.length) return `<section class="sec" style="--c:var(--sub)"><div class="sec-h"><h2>Abonnements</h2></div><p class="empty">Aucun abonnement. <button class="btn link" style="padding:0" data-act="edit-cats">En ajouter</button></p></section>`;
+  const list = c.abos.map(a => ({...a, dans: nextDebit(a.jour)})).sort((x, y) => (x.dans ?? 99) - (y.dans ?? 99));
+  const when = d => d == null ? 'Touche pour ajouter le jour du prélèvement' : d === 0 ? '<span class="soon">Prélevé aujourd’hui</span>' : d === 1 ? '<span class="soon">Prélevé demain</span>' : d <= 5 ? `<span class="soon">Prélevé dans ${d} jours</span>` : `Prélevé dans ${d} jours`;
+  return `
+    <section class="sec" style="--c:var(--sub)" aria-labelledby="h-abo">
+      <div class="sec-h"><h2 id="h-abo">Abonnements</h2><span class="tot num">${fmt(t.abos)}<small style="font-size:12px;color:var(--muted)"> /mois</small></span></div>
+      <div class="abo-year"><span>Sur un an, tes abonnements te coûtent</span><b class="num">${fmt(t.abos * 12)}</b></div>
+      ${list.map(a => `
+        <button class="abo-row" data-act="abo-edit" data-id="${esc(a.id)}">
+          <span class="abo-ic" aria-hidden="true">${esc((a.nom || '?').charAt(0).toUpperCase())}</span>
+          <span class="l">${esc(a.nom)}<small>${a.jour ? 'Le ' + a.jour + ' du mois · ' : ''}${when(a.dans)}</small></span>
+          <b class="num">${fmt(a.montant)}</b>
+        </button>`).join('')}
+    </section>`;
+}
+function aboEdit(id){
+  const a = S.cfg.abos.find(x => x.id === id); if (!a) return;
+  openModal(`
+    <div class="sheet-h"><h2>${esc(a.nom)}</h2><button class="icon-btn" data-act="close" aria-label="Fermer">×</button></div>
+    <form class="card" id="abo-form" data-id="${esc(a.id)}">
+      <div class="field"><label for="abo-amt">Prix par mois</label><input id="abo-amt" inputmode="decimal" value="${esc(amtVal(a.montant))}"></div>
+      <div class="field"><label for="abo-day">Jour du prélèvement (1 à 31)</label><input id="abo-day" inputmode="numeric" maxlength="2" value="${a.jour || ''}" placeholder="ex. 12"><small>Pour savoir quand il sera prélevé. Rempli tout seul quand tu analyses un relevé.</small></div>
+      <p class="msg" id="abo-msg"></p>
+      <div class="actions"><button class="btn" type="submit" style="flex:1">Enregistrer</button><button class="btn light" type="button" data-act="abo-del" data-id="${esc(a.id)}">Supprimer</button></div>
+    </form>`);
+}
+function saveCfg(cfg){ S.cfg = cfg; Docs.save('config', cfg); }
+
+/* ---------- ajout rapide (bouton +) ---------- */
+let Q = null;
+function learnedCat(nom){
+  const k = stemKey(nom) || norm(nom).trim(); if (!k) return null;
+  const ids = S.cfg.cats.map(c => c.id);
+  const a = (S.cfg.appris || {})[k]; if (a && ids.includes(a)) return a;
+  const same = (mon().depenses || []).slice().reverse().find(d => (stemKey(d.nom) || norm(d.nom)) === k);
+  return same && ids.includes(same.cat) ? same.cat : null;
+}
+function quickGuess(nom){ return learnedCat(nom) || (nom.trim() ? guessCat(nom) : null); }
+function openQuick(){
+  if (!S.cfg.cats.length){ toast('Ajoute d’abord une catégorie du mois dans Réglages.'); return; }
+  Q = {cat: null, manual: false};
+  const mois = monthLabel(S.monKey, false).toLowerCase();
+  openModal(`
+    <div class="sheet-h"><h2>Nouvelle dépense</h2><button class="icon-btn" data-act="close" aria-label="Fermer">×</button></div>
+    <form class="card" id="quick-form" autocomplete="off">
+      <div class="found"><input id="q-amt" inputmode="decimal" placeholder="0,00" aria-label="Montant"><strong>€</strong></div>
+      <input class="qtext" id="q-nom" placeholder="Quoi ? (McDo, Carrefour, coiffeur…)" maxlength="60" aria-label="Nom de la dépense">
+      <p class="meta" id="q-hint">La catégorie se choisit toute seule quand tu tapes le nom.</p>
+      <div class="qcats">${S.cfg.cats.map((k, i) => `<button type="button" class="tog" style="--c:${CAT_COLORS[i % CAT_COLORS.length]}" data-act="q-cat" data-id="${esc(k.id)}" aria-pressed="false">${esc(k.nom)}</button>`).join('')}</div>
+      <p class="msg" id="q-msg" role="status"></p>
+      <button class="btn" type="submit">Ajouter à ${esc(mois)}</button>
+    </form>`);
+  setTimeout(() => { const el = document.getElementById('q-amt'); if (el) el.focus(); }, 60);
+}
+function quickMark(){
+  modalEl.querySelectorAll('[data-act="q-cat"]').forEach(b => b.setAttribute('aria-pressed', b.dataset.id === Q.cat));
+  const h = document.getElementById('q-hint'), k = S.cfg.cats.find(c => c.id === Q.cat);
+  if (h) h.textContent = k ? (Q.manual ? 'Rangée dans ' + k.nom + '. L’appli s’en souviendra.' : 'Rangée automatiquement dans ' + k.nom + '. Touche une autre catégorie pour changer.') : 'La catégorie se choisit toute seule quand tu tapes le nom.';
+}
+modalEl.addEventListener('input', e => {
+  if (e.target.id === 'q-nom' && Q && !Q.manual){ Q.cat = quickGuess(e.target.value); quickMark(); }
+});
+modalEl.addEventListener('submit', e => {
+  const f = e.target;
+  if (f.id === 'quick-form'){
+    e.preventDefault();
+    const v = parseAmt(document.getElementById('q-amt').value), nom = document.getElementById('q-nom').value.trim();
+    const msg = t => { document.getElementById('q-msg').textContent = t; };
+    if (v == null || Number.isNaN(v) || v <= 0) return msg('Écris un montant, par exemple 12,50.');
+    if (!nom) return msg('Donne un nom à la dépense.');
+    const cat = Q.cat || quickGuess(nom) || S.cfg.cats[0].id;
+    if (Q.manual){ const k = stemKey(nom) || norm(nom).trim(); if (k && guessCat(nom) !== cat){ const cfg = clone(S.cfg); cfg.appris = {...(cfg.appris || {}), [k]: cat}; saveCfg(cfg); } }
+    const m = clone(mon());
+    m.depenses = [...m.depenses, {id: rid(), cat, nom, montant: v, le: new Date().toISOString().slice(0, 10)}];
+    S.panel = 'c-' + cat;
+    Q = null; closeModal(); saveMon(m);
+    const k = S.cfg.cats.find(c => c.id === cat);
+    toast(nom + ' · ' + fmt(v) + ' → ' + (k ? k.nom : ''));
+    return;
+  }
+  if (f.id === 'abo-form'){
+    e.preventDefault();
+    const amt = parseAmt(document.getElementById('abo-amt').value), dayS = document.getElementById('abo-day').value.trim(), day = dayS ? parseInt(dayS, 10) : null;
+    if (amt == null || Number.isNaN(amt)){ document.getElementById('abo-msg').textContent = 'Écris un prix, par exemple 13,49.'; return; }
+    if (dayS && !(day >= 1 && day <= 31)){ document.getElementById('abo-msg').textContent = 'Le jour doit être entre 1 et 31.'; return; }
+    const cfg = clone(S.cfg); const a = cfg.abos.find(x => x.id === f.dataset.id); a.montant = amt; if (day) a.jour = day; else delete a.jour;
+    saveCfg(cfg); closeModal(); render(); toast('Abonnement mis à jour'); return;
+  }
+  if (f.id === 'pin-form'){ e.preventDefault(); return; }
+});
+
+/* ---------- recherche ---------- */
+let ALL = null;
+async function loadAllMonths(){
+  const out = {};
+  const pre = 'budget:doc:' + S.user.id + ':m-';
+  for (let i = 0; i < localStorage.length; i++){ const k = localStorage.key(i) || ''; if (k.startsWith(pre)){ try { out[k.slice(pre.length)] = JSON.parse(localStorage.getItem(k)); } catch(e){} } }
+  try {
+    const u = await session();
+    if (u){ const rows = await api('/rest/v1/budget_docs?select=key,data&key=like.m-*', {}, u.token); (rows || []).forEach(r => { const k = r.key.slice(2); if (!LS.get(Docs.pendingKey(r.key), false)) out[k] = r.data; }); }
+  } catch(e){}
+  if (S.mon) out[S.monKey] = S.mon;
+  return out;
+}
+function openSearch(){
+  openModal(`
+    <div class="sheet-h"><h2>Rechercher</h2><button class="icon-btn" data-act="close" aria-label="Fermer">×</button></div>
+    <input class="qtext" id="s-q" type="search" placeholder="McDo, coiffeur, Sorties…" aria-label="Rechercher une dépense" autocomplete="off">
+    <div class="card" id="s-out"><p class="meta">Cherche dans toutes tes dépenses, tous les mois.</p></div>`);
+  setTimeout(() => { const el = document.getElementById('s-q'); if (el) el.focus(); }, 60);
+  ALL = null;
+  loadAllMonths().then(a => { ALL = a; runSearch(); });
+}
+function runSearch(){
+  const el = document.getElementById('s-q'), out = document.getElementById('s-out');
+  if (!el || !out) return;
+  const q = norm(el.value).trim();
+  if (!ALL){ out.innerHTML = '<div class="spinner" aria-hidden="true"></div>'; return; }
+  if (q.length < 2){ out.innerHTML = '<p class="meta">Cherche dans toutes tes dépenses, tous les mois.</p>'; return; }
+  const catName = id => (S.cfg.cats.find(c => c.id === id) || {}).nom || '';
+  const res = [];
+  Object.entries(ALL).forEach(([k, m]) => (m && m.depenses || []).forEach(d => { if (norm(d.nom).includes(q) || norm(catName(d.cat)).includes(q)) res.push({...d, mk: k}); }));
+  res.sort((a, b) => (b.mk + (b.le || '')).localeCompare(a.mk + (a.le || '')));
+  const tot = res.reduce((s, d) => s + (d.montant || 0), 0);
+  const fmtM = k => { const [y, m] = k.split('-').map(Number); return new Date(y, m - 1, 1).toLocaleDateString('fr-FR', {month: 'short', year: 'numeric'}); };
+  out.innerHTML = res.length ? `
+    <div class="abo-year" style="background:var(--accent-soft)"><span>${res.length} dépense${res.length > 1 ? 's' : ''}</span><b class="num">${fmt(tot)}</b></div>
+    <div class="sres">${res.slice(0, 200).map(d => `<button data-act="s-go" data-k="${esc(d.mk)}" data-cat="${esc(d.cat)}"><span class="l">${esc(d.nom)}<small>${esc(catName(d.cat))} · ${esc(fmtM(d.mk))}${d.le && d.le.length === 10 ? ' · ' + d.le.slice(8, 10) + '/' + d.le.slice(5, 7) : ''}</small></span><b class="num">${fmt(d.montant)}</b></button>`).join('')}</div>`
+    : '<p class="meta">Aucune dépense trouvée.</p>';
+}
+modalEl.addEventListener('input', e => { if (e.target.id === 's-q') runSearch(); });
+
+/* ---------- verrouillage : code + Face ID / empreinte ---------- */
+const lockEl = document.getElementById('lock');
+let PIN = null, locked = false, hiddenAt = 0, tries = 0, waitUntil = 0;
+const lockKey = () => 'lock:' + (S.user && S.user.id);
+const lockCfg = () => S.user ? LS.get(lockKey(), null) : null;
+async function hashPin(salt, pin){
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(salt + ':' + pin));
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+const b64 = buf => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const unb64 = s => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4)), c => c.charCodeAt(0));
+async function bioAvailable(){ try { return !!(window.PublicKeyCredential && await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()); } catch(e){ return false; } }
+async function bioCheck(){
+  const lc = lockCfg(); if (!lc || !lc.bio) return false;
+  try {
+    await navigator.credentials.get({publicKey: {challenge: crypto.getRandomValues(new Uint8Array(32)), allowCredentials: [{type: 'public-key', id: unb64(lc.bio)}], userVerification: 'required', timeout: 60000, rpId: location.hostname}});
+    return true;
+  } catch(e){ return false; }
+}
+function keypad(extraLeft){
+  return `<div class="keypad">${[1,2,3,4,5,6,7,8,9].map(n => `<button data-act="pin" data-v="${n}">${n}</button>`).join('')}${extraLeft || '<span></span>'}<button data-act="pin" data-v="0">0</button><button class="ghostk" data-act="pin-del" aria-label="Effacer">⌫</button></div>`;
+}
+function drawLock(msg){
+  const lc = lockCfg();
+  lockEl.innerHTML = `
+    <h2>Budget by MGM</h2>
+    <p>${esc(msg || 'Tape ton code')}</p>
+    <div class="pdots" id="pdots">${[0,1,2,3].map(i => `<span class="${i < PIN.length ? 'on' : ''}"></span>`).join('')}</div>
+    ${keypad(lc && lc.bio ? '<button class="ghostk" data-act="bio">Face ID</button>' : '')}
+    <button class="btn link" data-act="lock-forgot">Code oublié ? Se reconnecter</button>`;
+}
+function lockNow(){
+  if (!lockCfg()) return;
+  locked = true; PIN = ''; lockEl.hidden = false; app.setAttribute('aria-hidden', 'true'); drawLock();
+  const lc = lockCfg(); if (lc.bio) setTimeout(async () => { if (locked && await bioCheck()) unlock(); }, 300);
+}
+function unlock(){ locked = false; tries = 0; lockEl.hidden = true; lockEl.innerHTML = ''; app.removeAttribute('aria-hidden'); }
+async function pinTyped(){
+  if (PIN.length < 4) return;
+  const lc = lockCfg();
+  if (Date.now() < waitUntil){ PIN = ''; drawLock('Trop d’essais. Attends quelques secondes.'); return; }
+  if (await hashPin(lc.salt, PIN) === lc.hash){ unlock(); return; }
+  tries++; PIN = '';
+  if (tries >= 5){ waitUntil = Date.now() + 30000; tries = 0; drawLock('Trop d’essais. Réessaie dans 30 secondes.'); }
+  else drawLock('Code incorrect');
+  const d = document.getElementById('pdots'); if (d) d.classList.add('shake');
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') hiddenAt = Date.now();
+  else if (hiddenAt && Date.now() - hiddenAt > 60000 && S.user && lockCfg() && !locked) lockNow();
+});
+// réglage du code
+let SETPIN = null;
+async function openLockSettings(){
+  const lc = lockCfg(), bio = await bioAvailable();
+  if (!lc){ SETPIN = {step: 1, first: '', cur: ''}; drawSetPin(); return; }
+  openModal(`
+    <div class="sheet-h"><h2>Verrouillage</h2><button class="icon-btn" data-act="close" aria-label="Fermer">×</button></div>
+    <div class="card">
+      <p>L’appli demande ton code quand tu l’ouvres, et quand tu y reviens après plus d’une minute.</p>
+      ${bio ? `<button class="btn${lc.bio ? ' light' : ''}" data-act="bio-toggle">${lc.bio ? 'Désactiver Face ID / empreinte' : 'Activer Face ID / empreinte'}</button>` : '<p class="meta">Face ID ou l’empreinte ne sont pas disponibles sur cet appareil.</p>'}
+      <button class="btn light" data-act="pin-change">Changer le code</button>
+      <button class="btn light" data-act="pin-off">Désactiver le verrouillage</button>
+    </div>`);
+}
+function drawSetPin(msg){
+  openModal(`
+    <div class="sheet-h"><h2>${SETPIN.step === 1 ? 'Choisis un code' : 'Confirme ton code'}</h2><button class="icon-btn" data-act="close" aria-label="Fermer">×</button></div>
+    <div class="card" style="align-items:center;gap:18px">
+      <p>${esc(msg || (SETPIN.step === 1 ? '4 chiffres, demandés à chaque ouverture de l’appli.' : 'Tape le même code une deuxième fois.'))}</p>
+      <div class="pdots">${[0,1,2,3].map(i => `<span class="${i < SETPIN.cur.length ? 'on' : ''}"></span>`).join('')}</div>
+      ${keypad()}
+    </div>`);
+}
+async function setPinTyped(){
+  if (SETPIN.cur.length < 4) return;
+  if (SETPIN.step === 1){ SETPIN = {step: 2, first: SETPIN.cur, cur: ''}; drawSetPin(); return; }
+  if (SETPIN.cur !== SETPIN.first){ SETPIN = {step: 1, first: '', cur: ''}; drawSetPin('Les deux codes ne sont pas pareils. Recommence.'); return; }
+  const salt = b64(crypto.getRandomValues(new Uint8Array(16)));
+  const old = lockCfg();
+  LS.set(lockKey(), {salt, hash: await hashPin(salt, SETPIN.first), bio: old && old.bio || null});
+  SETPIN = null;
+  if (!old && await bioAvailable()){
+    openModal(`
+      <div class="sheet-h"><h2>Code enregistré</h2><button class="icon-btn" data-act="close" aria-label="Fermer">×</button></div>
+      <div class="card"><p>Tu veux aussi pouvoir déverrouiller avec <b>Face ID ou ton empreinte</b> ?</p>
+      <button class="btn" data-act="bio-toggle">Oui, activer</button><button class="btn light" data-act="close">Non, juste le code</button></div>`);
+  } else { closeModal(); toast('Code enregistré'); }
+}
+async function bioToggle(){
+  const lc = lockCfg(); if (!lc) return;
+  if (lc.bio){ lc.bio = null; LS.set(lockKey(), lc); closeModal(); toast('Face ID / empreinte désactivé'); return; }
+  try {
+    const cred = await navigator.credentials.create({publicKey: {
+      challenge: crypto.getRandomValues(new Uint8Array(32)),
+      rp: {name: 'Budget by MGM', id: location.hostname},
+      user: {id: new TextEncoder().encode(S.user.id).slice(0, 64), name: S.user.pseudo, displayName: S.user.pseudo},
+      pubKeyCredParams: [{type: 'public-key', alg: -7}, {type: 'public-key', alg: -257}],
+      authenticatorSelection: {authenticatorAttachment: 'platform', userVerification: 'required', residentKey: 'discouraged'},
+      timeout: 60000}});
+    lc.bio = b64(cred.rawId); LS.set(lockKey(), lc); closeModal(); toast('Face ID / empreinte activé');
+  } catch(e){ toast('Pas réussi à activer Face ID / empreinte sur cet appareil.'); }
+}
+
 /* ---------- pages qui glissent ---------- */
 function setupSlider(cur){
   const slider = document.getElementById('slider');
@@ -763,7 +1084,7 @@ function goPanel(i){
 /* ---------- relevé bancaire (facultatif, lu sur le téléphone, rien n'est envoyé) ---------- */
 const bankEl = document.getElementById('bank-file');
 let BANK = null;
-const CREDIT_WORDS = /(vir(ement)?( sepa| inst| instantane)* (recu|de\b|en votre faveur)|en votre faveur|faveur|salaire|\bpaie\b|\bcaf\b|\bapl\b|cpam|ameli|pole emploi|france travail|crous|bourse|allocation|remb|rembours|avoir|depot|versement recu|\bprime\b|retour|annulation|credit\b)/;
+const CREDIT_WORDS = /(vir(ement)?( sepa| inst| instantane)* (recu|de\b|en votre faveur)|en votre faveur|faveur|salaire|\bpaie\b|\bcaf\b|\bapl\b|cpam|ameli|pole emploi|france travail|crous|bourse|allocation|remb|rembours|avoir|depot|versement recu|\bprime\b|retour|annulation|credit\b|action logement|\baide|mobili|loca.?pass|visale|indemnit|mutuelle rembt|impots rembt|tresor public rembt)/;
 const CAT_WORDS = {
   sorties: /(resto|restaurant|mc ?do|burger|kfc|quick|brasserie|\bbar\b|pizza|sushi|kebab|tacos|uber ?eats|deliveroo|just ?eat|cinema|pathe|ugc|cafe|bowling|boite|club)/,
   courses: /(carrefour|leclerc|lidl|auchan|intermarche|super ?u\b|hyper ?u\b|monoprix|franprix|aldi|casino|netto|picard|biocoop|grand frais|boulang|marche)/,
@@ -847,8 +1168,12 @@ function opsFromPdf(rows, year){
     for (let i = 1; i < xs.length; i++) if (xs[i] - xs[i - 1] > gap){ gap = xs[i] - xs[i - 1]; at = (xs[i] + xs[i - 1]) / 2; }
     if (gap > 30) split = at;
   }
+  // Si le relevé met un "-" devant les sorties, tout ce qui n'a pas de "-" est une rentrée (et l'inverse avec "+")
+  const hasMinus = ops.some(o => o.sign === '-'), hasPlus = ops.some(o => o.sign === '+');
   ops.forEach(o => {
     const credWord = CREDIT_WORDS.test(norm(o.label));
+    if (!o.sign && hasMinus && !hasPlus){ o.debit = false; delete o.xc; delete o.dX; delete o.cX; delete o.sign; return; }
+    if (!o.sign && hasPlus && !hasMinus){ o.debit = true; delete o.xc; delete o.dX; delete o.cX; delete o.sign; return; }
     if (o.sign === '-') o.debit = true;
     else if (o.sign === '+') o.debit = false;
     else if (o.dX != null && o.cX != null) o.debit = Math.abs(o.xc - o.dX) < Math.abs(o.xc - o.cX);
@@ -914,14 +1239,15 @@ function analyseBank(ops){
   const other = debits.length - inMonth.length;
   const known = [];
   c.fixes.forEach(f => known.push({nom: f.nom, v: m.fixesReel[f.id] ?? f.prevu}));
-  c.abos.forEach(a => known.push({nom: a.nom, v: a.montant}));
+  c.abos.forEach(a => known.push({nom: a.nom, v: a.montant, abo: a.id}));
   (m.depenses || []).forEach(d => known.push({nom: d.nom, v: d.montant}));
   const used = new Set();
   const items = inMonth.map((o, i) => {
     const t = norm(o.label);
     let k = known.findIndex((x, j) => !used.has(j) && x.v != null && Math.abs(x.v - o.v) < 0.01);
-    if (k < 0) k = known.findIndex((x, j) => { if (used.has(j)) return false; const w = norm(x.nom).split(/[\s(\/+]/).filter(z => z.length >= 4)[0]; return w && t.includes(w); });
-    if (k >= 0){ used.add(k); return {i, ...o, noted: true, avec: known[k].nom}; }
+    let byName = false;
+    if (k < 0){ k = known.findIndex((x, j) => { if (used.has(j)) return false; const w = norm(x.nom).split(/[\s(\/+]/).filter(z => z.length >= 4)[0]; return w && t.includes(w); }); byName = k >= 0; }
+    if (k >= 0){ used.add(k); return {i, ...o, noted: true, avec: known[k].nom, abo: known[k].abo, prixChange: byName && known[k].abo && Math.abs(known[k].v - o.v) >= 0.01 ? known[k].v : null}; }
     return {i, ...o, noted: false, cat: guessCat(o.label), nom: cleanLabel(o.label), pick: true};
   });
   // opérations douteuses : on demande, sauf si on connaît déjà la réponse
@@ -944,6 +1270,8 @@ function analyseBank(ops){
     const g = groups[d[0] + '|' + x.key] || (groups[d[0] + '|' + x.key] = {kind: d[0], key: x.key, items: []});
     g.items.push(x.i);
   });
+  const ABO_RE = /(abonnement|subscription|netflix|spotify|deezer|disney|canal ?\+|canalplus|prime video|amazon prime|amzn prime|youtube|apple\.com|itunes|google play|google one|playstation|psn|xbox|game ?pass|nintendo|basic ?fit|fitness park|keep ?cool|on air|sfr|orange|bouygues|free mobile|free telecom|sosh|red by|b&you|crunchyroll|molotov|chatgpt|openai|icloud|dropbox|adobe|microsoft|uber one|deliveroo plus|tinder|bumble|audible|kindle)/;
+  items.forEach(x => { if (!x.noted && !x.exclu && ABO_RE.test(norm(x.label))) x.nouvelAbo = true; });
   const months = {}; debits.forEach(o => { months[o.date.key] = (months[o.date.key] || 0) + 1; });
   return {months, items, other, total: inMonth.reduce((s, o) => s + o.v, 0), questions: Object.values(groups), q: 0, remember: true};
 }
@@ -1001,6 +1329,11 @@ function bankResult(){
       ${!r.items.length ? (() => { const best = Object.entries(r.months).sort((a, b) => b[1] - a[1])[0]; return best
         ? `<p class="warn">Aucune dépense de ${esc(monthLabel(S.monKey).toLowerCase())} dans ce fichier. On dirait le relevé de <b>${esc(monthLabel(best[0]).toLowerCase())}</b>.</p><button class="btn" data-act="bank-month" data-k="${best[0]}">Analyser ${esc(monthLabel(best[0]).toLowerCase())}</button>`
         : `<p class="warn">Aucune dépense trouvée dans ce fichier. Essaie le format CSV.</p>`; })() : ''}
+      ${(() => { const nv = r.items.filter(x => x.nouvelAbo && !x.noted && !x.exclu), ch = r.items.filter(x => x.prixChange != null);
+        if (!nv.length && !ch.length) return '';
+        return `<div class="abo-year" style="flex-direction:column;align-items:stretch;gap:8px"><b style="font-size:16px">Abonnements</b>
+          ${ch.map(x => `<div>${esc(x.avec)} a changé de prix : ${fmt(x.prixChange)} → <b>${fmt(x.v)}</b> <button class="btn link" style="padding:2px 4px" data-act="bank-abo-price" data-i="${x.i}">Mettre à jour</button></div>`).join('')}
+          ${nv.map(x => `<div>Nouvel abonnement ? <b>${esc(cleanLabel(x.label))}</b> · ${fmt(x.v)} <button class="btn link" style="padding:2px 4px" data-act="bank-abo-add" data-i="${x.i}">Ajouter à mes abonnements</button></div>`).join('')}</div>`; })()}
       ${todo.length ? `<p><b>Coche ce que tu veux ajouter</b> et choisis la catégorie :</p>
       <div class="bk-list">${todo.map(x => `
         <div class="bk-row">
@@ -1027,6 +1360,10 @@ async function runBank(month){
   if (S.monKey !== month){ goMonth(month); await waitMonth(month); }
   BANK = analyseBank(BANK_OPS);
   BANK.month = month;
+  const days = {}; BANK.items.forEach(x => { if (x.abo) days[x.abo] = +x.date.label.slice(0, 2); });
+  if (Object.keys(days).length && S.cfg.abos.some(a => days[a.id] && !a.jour)){
+    const cfg = clone(S.cfg); cfg.abos.forEach(a => { if (days[a.id] && !a.jour) a.jour = days[a.id]; }); saveCfg(cfg);
+  }
   bankResult();
 }
 let BANK_FILES = [], BANK_ADD = false;
@@ -1078,12 +1415,13 @@ function openMenu(){
   const t = theme();
   const ic = d => `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
   modalEl.innerHTML = `<div class="overlay side" data-act="modal-bg"><nav class="drawer" role="dialog" aria-modal="true" aria-label="Menu">
-    <div class="drawer-h"><div><h2>Budget by MGM</h2><p>${esc(S.user.pseudo)}</p></div><button class="icon-btn" data-act="close" aria-label="Fermer le menu">×</button></div>
+    <div class="drawer-h"><div><h2>Budget by MGM</h2><p>${esc(S.user.email && !S.user.email.endsWith(EMAIL_DOMAIN) ? S.user.email : S.user.pseudo)}</p></div><button class="icon-btn" data-act="close" aria-label="Fermer le menu">×</button></div>
     <div class="dgrp">
       <h3>Réglages</h3>
       <button class="ditem" data-act="edit-cats">${ic('<path d="M4 6h10M4 12h16M4 18h7"/><circle cx="17" cy="6" r="2"/><circle cx="14" cy="18" r="2"/>')}Mes catégories et montants</button>
       <button class="ditem" data-act="slip-menu">${ic('<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/>')}Déposer un bulletin</button>
       <button class="ditem" data-act="bank">${ic('<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h4"/>')}Vérifier avec mon relevé <small style="margin-left:auto;color:var(--muted);font-weight:600;font-size:12px">facultatif</small></button>
+      <button class="ditem" data-act="lock-settings">${ic('<rect x="5" y="10" width="14" height="11" rx="2.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>')}Code et Face ID</button>
       <button class="ditem" data-act="install">${ic('<rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/>')}Mettre sur l’écran d’accueil</button>
     </div>
     <div class="dgrp">
@@ -1249,6 +1587,24 @@ document.addEventListener('click', e => {
   if (act === 'next') return goMonth(shiftKey(S.monKey, 1));
   if (act === 'today') return goMonth(CUR);
   if (act === 'menu') return openMenu();
+  if (act === 'quick') return openQuick();
+  if (act === 'q-cat'){ Q.cat = b.dataset.id; Q.manual = true; quickMark(); return; }
+  if (act === 'search') return openSearch();
+  if (act === 's-go'){ closeModal(); S.panel = 'c-' + b.dataset.cat; if (b.dataset.k !== S.monKey) goMonth(b.dataset.k); else render(); return; }
+  if (act === 'abo-edit') return aboEdit(b.dataset.id);
+  if (act === 'abo-del'){ const cfg = clone(S.cfg); cfg.abos = cfg.abos.filter(a => a.id !== b.dataset.id); saveCfg(cfg); closeModal(); render(); toast('Abonnement supprimé'); return; }
+  if (act === 'lock-settings'){ openLockSettings(); return; }
+  if (act === 'pin'){
+    if (locked){ if (PIN.length < 4){ PIN += b.dataset.v; drawLock(); pinTyped(); } return; }
+    if (SETPIN && SETPIN.cur.length < 4){ SETPIN.cur += b.dataset.v; drawSetPin(); setPinTyped(); }
+    return;
+  }
+  if (act === 'pin-del'){ if (locked){ PIN = PIN.slice(0, -1); drawLock(); } else if (SETPIN){ SETPIN.cur = SETPIN.cur.slice(0, -1); drawSetPin(); } return; }
+  if (act === 'bio'){ bioCheck().then(ok => { if (ok) unlock(); }); return; }
+  if (act === 'lock-forgot'){ LS.set(lockKey(), null); unlock(); logout(); return; }
+  if (act === 'pin-change'){ SETPIN = {step: 1, first: '', cur: ''}; drawSetPin(); return; }
+  if (act === 'pin-off'){ LS.set(lockKey(), null); closeModal(); toast('Verrouillage désactivé'); return; }
+  if (act === 'bio-toggle'){ bioToggle(); return; }
   if (act === 'panel') return goPanel(+b.dataset.i);
   if (act === 'theme' || act === 'accent'){
     const t = theme(); if (act === 'theme') t.mode = b.dataset.v; else t.accent = b.dataset.v;
@@ -1263,6 +1619,17 @@ document.addEventListener('click', e => {
   }
   if (act === 'bank-pick'){ const sel = document.getElementById('bk-month'); BANK_MONTH = sel ? sel.value : S.monKey; bankEl.click(); return; }
   if (act === 'bank-month'){ runBank(b.dataset.k); return; }
+  if (act === 'bank-abo-add'){
+    const x = BANK.items.find(y => y.i === +b.dataset.i); if (!x) return;
+    const cfg = clone(S.cfg); const id = 'c-' + rid(); cfg.abos.push({id, nom: cleanLabel(x.label), montant: x.v, jour: +x.date.label.slice(0, 2)}); saveCfg(cfg);
+    x.noted = true; x.avec = cleanLabel(x.label); x.abo = id; x.nouvelAbo = false; x.pick = false;
+    toast('Ajouté à tes abonnements'); bankResult(); return;
+  }
+  if (act === 'bank-abo-price'){
+    const x = BANK.items.find(y => y.i === +b.dataset.i); if (!x) return;
+    const cfg = clone(S.cfg); const a = cfg.abos.find(z => z.id === x.abo); if (a) a.montant = x.v; saveCfg(cfg);
+    x.prixChange = null; toast('Prix mis à jour'); bankResult(); return;
+  }
   if (act === 'bank-more'){ BANK_ADD = true; bankEl.click(); return; }
   if (act === 'bank-answer'){
     const r = BANK, g = r.questions[r.q], v = b.dataset.v;
@@ -1378,7 +1745,10 @@ app.addEventListener('change', e => {
 /* ---------- démarrage ---------- */
 applyTheme(theme());
 S.user = LS.get('user', null);
-if (S.user) afterLogin(); else { S.view = 'auth'; render(); }
+const hashLogin = readAuthHash();
+if (RECOVERY){ S.view = 'auth'; render(); }
+else if (hashLogin){ S.view = 'auth'; render(); }
+else if (S.user){ afterLogin(); lockNow(); } else { S.view = 'auth'; render(); }
 
 /* ---------- mise à jour automatique (même quand l'appli est sur l'écran d'accueil) ---------- */
 function busyNow(){ return S.view === 'wizard' || !!modalEl.innerHTML || inputFocused(); }
