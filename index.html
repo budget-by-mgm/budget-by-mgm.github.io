@@ -238,7 +238,7 @@ h1,h2,h3{font-family:var(--font-display);text-wrap:balance;margin:0}
 <div id="modal"></div>
 <div id="toast" class="toast" hidden></div>
 
-<script>window.__APP_VER__="2026.11.19-1527";</script>
+<script>window.__APP_VER__="2026.11.19-1534";</script>
 <script>
 (() => {
 "use strict";
@@ -763,7 +763,7 @@ function goPanel(i){
 /* ---------- relevé bancaire (facultatif, lu sur le téléphone, rien n'est envoyé) ---------- */
 const bankEl = document.getElementById('bank-file');
 let BANK = null;
-const CREDIT_WORDS = /(vir(ement)? (sepa )?(recu|de |inst recu)|salaire|caf\b|remb|avoir|depot|versement recu|prime)/;
+const CREDIT_WORDS = /(vir(ement)?( sepa| inst| instantane)* (recu|de\b|en votre faveur)|en votre faveur|faveur|salaire|\bpaie\b|\bcaf\b|\bapl\b|cpam|ameli|pole emploi|france travail|crous|bourse|allocation|remb|rembours|avoir|depot|versement recu|\bprime\b|retour|annulation|credit\b)/;
 const CAT_WORDS = {
   sorties: /(resto|restaurant|mc ?do|burger|kfc|quick|brasserie|\bbar\b|pizza|sushi|kebab|tacos|uber ?eats|deliveroo|just ?eat|cinema|pathe|ugc|cafe|bowling|boite|club)/,
   courses: /(carrefour|leclerc|lidl|auchan|intermarche|super ?u\b|hyper ?u\b|monoprix|franprix|aldi|casino|netto|picard|biocoop|grand frais|boulang|marche)/,
@@ -826,23 +826,36 @@ function opsFromPdf(rows, year){
     const txt = r.parts.map(p => p.s).join(' '), t = norm(txt);
     const pd = r.parts.find(p => /^debit/.test(norm(p.s))), pc = r.parts.find(p => /^credit/.test(norm(p.s)));
     if (pd && pc){ debitX = pd.xc; creditX = pc.xc; return; }
-    if (/(ancien|nouveau) solde|solde (au|crediteur|debiteur)|total des|report/.test(t)){ last = null; return; }
+    if (/(ancien|nouveau) solde|solde (au|crediteur|debiteur|en euros)|total des|totaux|report/.test(t)){ last = null; return; }
     const date = parseDate(txt, year);
     let amtPart = null;
     for (let i = r.parts.length - 1; i >= 0; i--){ const a = amtTok(r.parts[i].s); if (a){ amtPart = {...a, xc: r.parts[i].xc, i}; break; } }
     if (date && amtPart){
-      const label = r.parts.filter((p, i) => i !== amtPart.i && !amtTok(p.s)).map(p => p.s).join(' ').replace(/^\s*\d{1,2}[\/.\-]\d{1,2}([\/.\-]\d{2,4})?\s*/, '').replace(/^\d{1,2}[\/.\-]\d{1,2}([\/.\-]\d{2,4})?\s*/, '');
-      let debit;
-      if (amtPart.sign === '-') debit = true;
-      else if (amtPart.sign === '+') debit = false;
-      else if (debitX != null && creditX != null) debit = Math.abs(amtPart.xc - debitX) < Math.abs(amtPart.xc - creditX);
-      else debit = !CREDIT_WORDS.test(norm(label));
-      last = {date, label, v: amtPart.v, debit};
+      const label = r.parts.filter((p, i) => i !== amtPart.i && !amtTok(p.s)).map(p => p.s).join(' ')
+        .replace(/^\s*\d{1,2}[\/.\-]\d{1,2}([\/.\-]\d{2,4})?\s*/, '').replace(/^\d{1,2}[\/.\-]\d{1,2}([\/.\-]\d{2,4})?\s*/, '');
+      last = {date, label, v: amtPart.v, sign: amtPart.sign, xc: amtPart.xc, dX: debitX, cX: creditX};
       ops.push(last);
-    } else if (last && !date && !amtPart && txt.length < 60 && ops.length){
-      last.label += ' ' + txt; // libellé sur deux lignes
-      last = null;
+    } else if (last && !date && !amtPart && txt.length < 60){
+      last.label += ' ' + txt; last = null; // libellé sur deux lignes
     }
+  });
+  // Pas d'en-tête Débit/Crédit lu : on regarde si les montants sont rangés dans deux colonnes
+  let split = null;
+  const xs = ops.filter(o => !o.sign && o.dX == null).map(o => o.xc).sort((a, b) => a - b);
+  if (xs.length >= 3){
+    let gap = 0, at = null;
+    for (let i = 1; i < xs.length; i++) if (xs[i] - xs[i - 1] > gap){ gap = xs[i] - xs[i - 1]; at = (xs[i] + xs[i - 1]) / 2; }
+    if (gap > 30) split = at;
+  }
+  ops.forEach(o => {
+    const credWord = CREDIT_WORDS.test(norm(o.label));
+    if (o.sign === '-') o.debit = true;
+    else if (o.sign === '+') o.debit = false;
+    else if (o.dX != null && o.cX != null) o.debit = Math.abs(o.xc - o.dX) < Math.abs(o.xc - o.cX);
+    else if (split != null) o.debit = o.xc < split;
+    else o.debit = !credWord;
+    if (o.debit && credWord && !o.sign && o.dX == null && split == null) o.debit = false;
+    delete o.xc; delete o.dX; delete o.cX; delete o.sign;
   });
   return ops;
 }
@@ -894,7 +907,9 @@ function stemKey(label){
 function rules(){ const r = (S.cfg && S.cfg.releve) || {}; return {non: r.non || [], oui: r.oui || []}; }
 function analyseBank(ops){
   const m = mon(), c = S.cfg, mk = S.monKey;
-  const debits = ops.filter(o => o.debit && o.v > 0);
+  const incomes = c.entrees.map(e => m.entrees && m.entrees[e.id] != null ? m.entrees[e.id] : e.prevu).filter(v => v > 0);
+  const isIncome = o => CREDIT_WORDS.test(norm(o.label)) || incomes.some(v => Math.abs(v - o.v) < 1 && /(vir|virement)/.test(norm(o.label)));
+  const debits = ops.filter(o => o.debit && o.v > 0 && !isIncome(o));
   const inMonth = debits.filter(o => o.date.key === mk);
   const other = debits.length - inMonth.length;
   const known = [];
@@ -922,15 +937,20 @@ function analyseBank(ops){
     const g = groups[d[0] + '|' + x.key] || (groups[d[0] + '|' + x.key] = {kind: d[0], key: x.key, items: []});
     g.items.push(x.i);
   });
-  return {items, other, total: inMonth.reduce((s, o) => s + o.v, 0), questions: Object.values(groups), q: 0, remember: true};
+  const months = {}; debits.forEach(o => { months[o.date.key] = (months[o.date.key] || 0) + 1; });
+  return {months, items, other, total: inMonth.reduce((s, o) => s + o.v, 0), questions: Object.values(groups), q: 0, remember: true};
 }
 function bankIntro(msg){
   openModal(`
     <div class="sheet-h"><h2>Vérifier avec mon relevé</h2><button class="icon-btn" data-act="close" aria-label="Fermer">×</button></div>
     <div class="card">
       ${msg ? `<p class="warn">${esc(msg)}</p>` : ''}
-      <p>C’est <b>facultatif</b>. Dépose le relevé de ton compte pour ${esc(monthLabel(S.monKey, false).toLowerCase())} : l’appli le compare avec ce que tu as noté et te montre les dépenses oubliées.</p>
+      <p>C’est <b>facultatif</b>. Dépose le relevé de ton compte : l’appli le compare avec ce que tu as noté et te montre les dépenses oubliées.</p>
       <p class="meta">Télécharge-le depuis l’appli de ta banque, en PDF ou en CSV. Il est lu sur ton téléphone et n’est envoyé nulle part.</p>
+      <div class="field"><label for="bk-month">C’est le relevé de quel mois ?</label>
+        <select id="bk-month" style="border:1px solid var(--line);background:var(--bg);border-radius:12px;padding:12px;font:inherit;color:var(--ink)">
+          ${Array.from({length: 12}, (_, i) => shiftKey(CUR, -i)).map(k => `<option value="${k}"${k === S.monKey ? ' selected' : ''}>${esc(monthLabel(k))}</option>`).join('')}
+        </select></div>
       <button class="btn" data-act="bank-pick">Choisir mon relevé</button>
     </div>`);
 }
@@ -960,7 +980,7 @@ function bankResult(){
   const opts = id => S.cfg.cats.map(k => `<option value="${esc(k.id)}"${k.id === id ? ' selected' : ''}>${esc(k.nom)}</option>`).join('');
   const n = todo.filter(x => x.pick).length, sum = todo.filter(x => x.pick).reduce((s, x) => s + x.v, 0);
   openModal(`
-    <div class="sheet-h"><h2>Ton relevé de ${esc(monthLabel(S.monKey, false).toLowerCase())}</h2><button class="icon-btn" data-act="close" aria-label="Fermer">×</button></div>
+    <div class="sheet-h"><h2>Relevé de ${esc(monthLabel(S.monKey).toLowerCase())}</h2><button class="icon-btn" data-act="close" aria-label="Fermer">×</button></div>
     <div class="card">
       <div class="bk-sum">
         <div><b class="num">${r.items.length}</b><span>dépenses lues</span></div>
@@ -968,7 +988,9 @@ function bankResult(){
         <div><b class="num" style="color:${todo.length ? 'var(--bad)' : 'var(--good)'}">${todo.length}</b><span>oubliées ?</span></div>
       </div>
       ${r.other ? `<p class="meta">${r.other} opération(s) d’autres mois ignorée(s).</p>` : ''}
-      ${!r.items.length ? `<p class="warn">Aucune dépense de ${esc(monthLabel(S.monKey).toLowerCase())} trouvée dans ce fichier. Vérifie que c’est le bon mois, ou essaie le format CSV.</p>` : ''}
+      ${!r.items.length ? (() => { const best = Object.entries(r.months).sort((a, b) => b[1] - a[1])[0]; return best
+        ? `<p class="warn">Aucune dépense de ${esc(monthLabel(S.monKey).toLowerCase())} dans ce fichier. On dirait le relevé de <b>${esc(monthLabel(best[0]).toLowerCase())}</b>.</p><button class="btn" data-act="bank-month" data-k="${best[0]}">Analyser ${esc(monthLabel(best[0]).toLowerCase())}</button>`
+        : `<p class="warn">Aucune dépense trouvée dans ce fichier. Essaie le format CSV.</p>`; })() : ''}
       ${todo.length ? `<p><b>Coche ce que tu veux ajouter</b> et choisis la catégorie :</p>
       <div class="bk-list">${todo.map(x => `
         <div class="bk-row">
@@ -986,15 +1008,26 @@ function bankResult(){
     </div>
     ${todo.length && !S.cfg.cats.length ? '<p class="meta">Ajoute une catégorie du mois dans Réglages pour pouvoir les ranger.</p>' : ''}`);
 }
+let BANK_MONTH = null, BANK_OPS = null;
+async function waitMonth(k){
+  for (let i = 0; i < 100 && !(S.monKey === k && S.monLoaded); i++) await sleep(100);
+}
+async function runBank(month){
+  BANK_MONTH = month;
+  if (S.monKey !== month){ goMonth(month); await waitMonth(month); }
+  BANK = analyseBank(BANK_OPS);
+  BANK.month = month;
+  bankResult();
+}
 async function readBank(file){
   openModal(`<div class="card" style="text-align:center"><div class="spinner" aria-hidden="true"></div><p><strong>Lecture du relevé…</strong></p></div>`);
   try {
-    const year = +S.monKey.slice(0, 4);
+    const month = BANK_MONTH || S.monKey, year = +month.slice(0, 4);
     const isCsv = /\.csv$/i.test(file.name) || /csv/.test(file.type);
     const ops = isCsv ? opsFromCsv(await file.text(), year) : opsFromPdf(await pdfRows(file), year);
     if (!ops.length){ bankIntro('Je n’ai pas réussi à lire les opérations de ce fichier. Si ta banque le propose, essaie le relevé au format CSV.'); return; }
-    BANK = analyseBank(ops);
-    bankResult();
+    BANK_OPS = ops;
+    await runBank(month);
   } catch(e){ bankIntro('La lecture n’a pas marché. Vérifie ta connexion (la première fois) ou essaie le format CSV.'); }
 }
 bankEl.addEventListener('change', () => { const f = bankEl.files && bankEl.files[0]; bankEl.value = ''; if (f) readBank(f); });
@@ -1205,10 +1238,10 @@ document.addEventListener('click', e => {
   }
   if (act === 'bank'){
     if (!S.cfg) return;
-    if (salaireReel(mon()) == null){ closeModal(); toast('Débloque d’abord le mois avec ton bulletin.'); return; }
     bankIntro(''); return;
   }
-  if (act === 'bank-pick'){ bankEl.click(); return; }
+  if (act === 'bank-pick'){ const sel = document.getElementById('bk-month'); BANK_MONTH = sel ? sel.value : S.monKey; bankEl.click(); return; }
+  if (act === 'bank-month'){ runBank(b.dataset.k); return; }
   if (act === 'bank-answer'){
     const r = BANK, g = r.questions[r.q], v = b.dataset.v;
     const rem = document.getElementById('bk-remember'); r.remember = !rem || rem.checked;
@@ -1234,7 +1267,7 @@ document.addEventListener('click', e => {
     const m = clone(mon());
     add.forEach(x => m.depenses.push({id: rid(), cat: x.cat, nom: x.nom, montant: x.v, le: x.date.key + '-' + x.date.label.slice(0, 2), source: 'releve'}));
     BANK = null; closeModal(); saveMon(m);
-    toast(add.length + ' dépense' + (add.length > 1 ? 's ajoutées' : ' ajoutée') + ' depuis ton relevé');
+    toast(add.length + ' dépense' + (add.length > 1 ? 's ajoutées' : ' ajoutée') + ' à ' + monthLabel(S.monKey, false).toLowerCase());
     return;
   }
   if (act === 'slip-menu'){ closeModal(); if (S.cfg) fileEl.click(); return; }
