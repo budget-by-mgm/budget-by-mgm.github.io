@@ -10,6 +10,7 @@
 <link rel="icon" href="icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Budget MGM">
+<script>try{var t=JSON.parse(localStorage.getItem('budget:theme')||'{}');if(t.mode&&t.mode!=='auto')document.documentElement.setAttribute('data-theme',t.mode);if(t.accent&&t.accent!=='bleu')document.documentElement.setAttribute('data-accent',t.accent);}catch(e){}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -23,18 +24,42 @@
   --good:#13805a; --good-soft:#dcf2e8; --bad:#c7344c; --bad-soft:#fbe2e6; --warn-soft:#fbf1d3;
   --font-display:"Bricolage Grotesque","Arial Rounded MT Bold",system-ui,sans-serif;
   --font-body:"Figtree",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --on-accent:#ffffff;
   color-scheme:light;
 }
 @media (prefers-color-scheme: dark){
-  :root{
+  :root:not([data-theme="light"]){
     --bg:#0f131b; --surface:#171d28; --ink:#e7ebf2; --muted:#9aa5b8; --line:#2a3343;
     --accent:#7ea3ff; --accent-soft:#1c2846;
     --sub:#f29a58; --sub-soft:#3a2517;
     --misc:#e6bb45; --pink:#f07ab2; --teal:#45c9c4; --violet:#a690ff;
     --good:#4fcb97; --good-soft:#123128; --bad:#ff7c90; --bad-soft:#3b1a22; --warn-soft:#342b11;
     color-scheme:dark;
+    --on-accent:#0f131b;
   }
 }
+:root[data-theme="dark"]{
+    --bg:#0f131b; --surface:#171d28; --ink:#e7ebf2; --muted:#9aa5b8; --line:#2a3343;
+    --accent:#7ea3ff; --accent-soft:#1c2846;
+    --sub:#f29a58; --sub-soft:#3a2517;
+    --misc:#e6bb45; --pink:#f07ab2; --teal:#45c9c4; --violet:#a690ff;
+    --good:#4fcb97; --good-soft:#123128; --bad:#ff7c90; --bad-soft:#3b1a22; --warn-soft:#342b11;
+    color-scheme:dark;
+  --on-accent:#0f131b;
+}
+:root[data-accent="vert"]{--accent:#13805a;--accent-soft:#dcf2e8}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"])[data-accent="vert"]{--accent:#4fcb97;--accent-soft:#123128}}
+:root[data-theme="dark"][data-accent="vert"]{--accent:#4fcb97;--accent-soft:#123128}
+:root[data-accent="violet"]{--accent:#6a4fcf;--accent-soft:#ece7fb}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"])[data-accent="violet"]{--accent:#a690ff;--accent-soft:#261f45}}
+:root[data-theme="dark"][data-accent="violet"]{--accent:#a690ff;--accent-soft:#261f45}
+:root[data-accent="rose"]{--accent:#c2417f;--accent-soft:#fbe4ef}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"])[data-accent="rose"]{--accent:#f07ab2;--accent-soft:#3a1a2b}}
+:root[data-theme="dark"][data-accent="rose"]{--accent:#f07ab2;--accent-soft:#3a1a2b}
+:root[data-accent="orange"]{--accent:#c9601f;--accent-soft:#fcebdd}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"])[data-accent="orange"]{--accent:#f29a58;--accent-soft:#3a2517}}
+:root[data-theme="dark"][data-accent="orange"]{--accent:#f29a58;--accent-soft:#3a2517}
+
 *{box-sizing:border-box}
 html,body{margin:0}
 body{background:var(--bg);color:var(--ink);font:16px/1.45 var(--font-body);-webkit-text-size-adjust:100%;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
@@ -44,7 +69,7 @@ button{cursor:pointer}
 .wrap{max-width:560px;margin:0 auto;padding:16px 16px 56px;display:flex;flex-direction:column;gap:14px}
 h1,h2,h3{font-family:var(--font-display);text-wrap:balance;margin:0}
 .num{font-variant-numeric:tabular-nums}
-.top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.top{display:flex;align-items:center;gap:12px}
 .months{display:flex;align-items:center;gap:6px}
 .months h1{font-size:24px;font-weight:700;letter-spacing:-.01em}
 .eyebrow{margin:0;font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
@@ -65,8 +90,7 @@ h1,h2,h3{font-family:var(--font-display);text-wrap:balance;margin:0}
 .stat p{margin:0}
 .stat .k{font-size:13px;color:var(--muted);font-weight:600}
 .stat .v{font-family:var(--font-display);font-weight:700;font-size:20px}
-.btn{border:0;border-radius:12px;padding:11px 16px;font-weight:700;background:var(--accent);color:#fff}
-@media (prefers-color-scheme: dark){.btn{color:#0f131b}}
+.btn{border:0;border-radius:12px;padding:11px 16px;font-weight:700;background:var(--accent);color:var(--on-accent)}
 .btn.light{background:var(--surface);color:var(--ink);border:1px solid var(--line)}
 .btn.link{background:none;color:var(--accent);padding:11px 6px}
 .btn:disabled{opacity:.5;cursor:default}
@@ -129,8 +153,7 @@ h1,h2,h3{font-family:var(--font-display);text-wrap:balance;margin:0}
 .grp .hint{margin:0;font-size:13px;color:var(--muted)}
 .pick{display:flex;flex-wrap:wrap;gap:8px}
 .tog{border:1.5px solid var(--line);background:var(--bg);border-radius:999px;padding:8px 14px;font-weight:600;font-size:15px;display:inline-flex;align-items:center;gap:6px}
-.tog[aria-pressed="true"]{background:var(--c);border-color:var(--c);color:#fff}
-@media (prefers-color-scheme: dark){.tog[aria-pressed="true"]{color:#0f131b}}
+.tog[aria-pressed="true"]{background:var(--c);border-color:var(--c);color:var(--on-accent)}
 .tog .ck{font-size:13px;opacity:.9}
 .tog.req{cursor:default}
 .custom{display:flex;gap:8px}
@@ -141,6 +164,40 @@ h1,h2,h3{font-family:var(--font-display);text-wrap:balance;margin:0}
 .ed-row input{width:110px;border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:9px 10px;text-align:right;font-variant-numeric:tabular-nums}
 .sticky{position:sticky;bottom:0;padding:10px 0 calc(6px + env(safe-area-inset-bottom));background:linear-gradient(to top,var(--bg) 70%,transparent);display:flex;gap:8px}
 .sticky .btn{flex:1;padding:14px}
+/* menu latéral */
+.burger{width:44px;height:44px;border-radius:14px;border:1px solid var(--line);background:var(--surface);display:grid;place-items:center;flex:none;color:var(--ink)}
+.overlay.side{align-items:stretch;justify-content:flex-start}
+.drawer{background:var(--surface);width:min(310px,86vw);height:100%;overflow:auto;padding:calc(18px + env(safe-area-inset-top)) 16px calc(18px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:18px;box-shadow:8px 0 30px rgba(0,0,0,.18);animation:slidein .22s ease-out}
+@keyframes slidein{from{transform:translateX(-100%)}to{transform:none}}
+@media (prefers-reduced-motion: reduce){.drawer{animation:none}}
+.drawer-h{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.drawer-h h2{font-size:22px;font-weight:800;letter-spacing:-.02em}
+.drawer-h p{margin:2px 0 0;color:var(--muted);font-size:14px}
+.dgrp{display:flex;flex-direction:column;gap:6px}
+.dgrp h3{font-family:var(--font-body);font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin:0 0 2px}
+.ditem{display:flex;align-items:center;gap:12px;width:100%;text-align:left;border:0;background:none;padding:12px 10px;border-radius:12px;font-weight:600;font-size:16px}
+.ditem:hover{background:var(--bg)}
+.ditem svg{flex:none;color:var(--accent)}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;background:var(--bg);border-radius:12px;padding:4px}
+.seg button{border:0;background:none;border-radius:9px;padding:9px 4px;font-weight:600;font-size:14px}
+.seg button[aria-pressed="true"]{background:var(--surface);box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.swatches{display:flex;gap:10px;flex-wrap:wrap;padding:4px 2px}
+.sw{width:38px;height:38px;border-radius:50%;border:3px solid var(--surface);box-shadow:0 0 0 1.5px var(--line);display:grid;place-items:center;color:#fff;font-size:16px}
+.sw[aria-pressed="true"]{box-shadow:0 0 0 2.5px var(--ink)}
+/* pages qui glissent */
+.tabs{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:0 -16px;padding:2px 16px 4px;scroll-padding:0 16px}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex:none;border:1.5px solid var(--line);background:var(--surface);border-radius:999px;padding:8px 14px;font-weight:700;font-size:14px;display:inline-flex;gap:6px;align-items:baseline;white-space:nowrap}
+.tab small{font-weight:600;color:var(--muted);font-size:12px}
+.tab[aria-selected="true"]{background:var(--c);border-color:var(--c);color:var(--on-accent)}
+.tab[aria-selected="true"] small{color:inherit;opacity:.85}
+.slider{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;margin:0 -16px;padding:0 16px;scroll-padding:0 16px;align-items:flex-start;overscroll-behavior-x:contain}
+.slider::-webkit-scrollbar{display:none}
+.panel{flex:0 0 100%;min-width:0;scroll-snap-align:start;scroll-snap-stop:always}
+.dotsnav{display:flex;justify-content:center;gap:6px;margin-top:-4px}
+.dotsnav span{width:6px;height:6px;border-radius:50%;background:var(--line);transition:width .2s}
+.dotsnav span.on{width:18px;border-radius:999px;background:var(--ink)}
+.swipe-hint{text-align:center;font-size:13px;color:var(--muted);margin:-6px 0 0}
 /* modale */
 .overlay{position:fixed;inset:0;background:rgba(10,14,22,.5);display:flex;align-items:flex-end;justify-content:center;z-index:20}
 .sheet{background:var(--bg);width:100%;max-width:560px;max-height:92%;overflow:auto;border-radius:22px 22px 0 0;padding:18px 16px calc(24px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:14px}
@@ -165,7 +222,7 @@ h1,h2,h3{font-family:var(--font-display);text-wrap:balance;margin:0}
 <div id="modal"></div>
 <div id="toast" class="toast" hidden></div>
 
-<script>window.__APP_VER__="2026.11.19-1506";</script>
+<script>window.__APP_VER__="2026.11.19-1523";</script>
 <script>
 (() => {
 "use strict";
@@ -233,7 +290,7 @@ const S = {
   user: null, view: 'loading',
   cfg: null, cfgLoaded: false,
   monKey: CUR, mon: null, monLoaded: false,
-  err: null, offline: false, needRender: false,
+  err: null, offline: false, needRender: false, panel: null,
 };
 
 /* ---------- API ---------- */
@@ -465,7 +522,8 @@ function header(){
   const isCur = S.monKey === CUR;
   return `
     <header class="top">
-      <div>
+      <button class="burger" data-act="menu" aria-label="Ouvrir le menu"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+      <div style="flex:1;min-width:0">
         <p class="eyebrow">Budget by MGM</p>
         <div class="months">
           <button class="icon-btn" data-act="prev" aria-label="Mois précédent">‹</button>
@@ -473,7 +531,6 @@ function header(){
           <button class="icon-btn" data-act="next" aria-label="Mois suivant">›</button>
         </div>
       </div>
-      <button class="ghost" data-act="menu">Réglages</button>
     </header>
     ${!isCur ? `<button class="btn light" data-act="today">Revenir à ${esc(monthLabel(CUR, false).toLowerCase())}</button>` : ''}
     ${S.offline ? `<p class="warn">Hors ligne : tes changements sont gardés sur ton téléphone et seront envoyés dès que tu auras du réseau.</p>` : ''}`;
@@ -501,12 +558,40 @@ function renderMain(){
   const t = totals();
   const deps = m.depenses || [];
   const slipInfo = m.bulletin ? `Salaire lu sur ton bulletin${m.bulletin.periode ? ' de ' + esc(monthLabel(m.bulletin.periode).toLowerCase()) : ''}.` : 'Salaire saisi à la main.';
-  const catSections = c.cats.map((k, i) => {
+  const panels = [];
+  panels.push({id: 'entrees', nom: 'Entrées', c: 'var(--accent)', tot: t.entrees, html: `
+    <section class="sec" style="--c:var(--accent)" aria-labelledby="h-in">
+      <div class="sec-h"><h2 id="h-in">Entrées</h2><span class="tot num">${fmt(t.entrees)}</span></div>
+      <div class="cols" aria-hidden="true"><span>Réel</span></div>
+      ${c.entrees.map(e => `
+      <div class="row">
+        <span class="lbl">${esc(e.nom)}<small>prévu ${fmt(e.prevu)}</small></span><span class="dots"></span>
+        <input class="cell" id="in-${esc(e.id)}" inputmode="decimal" autocomplete="off" data-field="entree" data-id="${esc(e.id)}" value="${esc(amtVal(m.entrees[e.id]))}" placeholder="${esc(amtVal(e.prevu ?? 0))}" aria-label="${esc(e.nom)} réel">
+      </div>`).join('')}
+      <div class="slip"><span>${slipInfo}</span><button data-act="slip">Relire un bulletin</button></div>
+    </section>`});
+  if (c.fixes.length) panels.push({id: 'fixes', nom: 'Fixes', c: 'var(--ink)', tot: t.fixes, html: `
+    <section class="sec" style="--c:var(--ink)" aria-labelledby="h-fx">
+      <div class="sec-h"><h2 id="h-fx">Dépenses fixes</h2><span class="tot num">${fmt(t.fixes)}</span></div>
+      <div class="cols" aria-hidden="true"><span>Réel</span></div>
+      ${c.fixes.map(f => `
+      <div class="row">
+        <span class="lbl">${esc(f.nom)}<small>prévu ${fmt(f.prevu)}</small></span><span class="dots"></span>
+        <input class="cell" id="fx-${esc(f.id)}" inputmode="decimal" autocomplete="off" data-field="fixe" data-id="${esc(f.id)}" value="${esc(amtVal(m.fixesReel[f.id]))}" placeholder="${esc(amtVal(f.prevu ?? 0))}" aria-label="${esc(f.nom)} réel">
+      </div>`).join('')}
+    </section>`});
+  if (c.abos.length) panels.push({id: 'abos', nom: 'Abonnements', c: 'var(--sub)', tot: t.abos, html: `
+    <section class="sec" style="--c:var(--sub)" aria-labelledby="h-ab">
+      <div class="sec-h"><h2 id="h-ab">Abonnements</h2><span class="tot num">${fmt(t.abos)}</span></div>
+      ${c.abos.map(a => `<div class="row"><span class="lbl">${esc(a.nom)}</span><span class="dots"></span><span class="fixed-amt num">${fmt(a.montant)}</span></div>`).join('')}
+    </section>`});
+  c.cats.forEach((k, i) => {
     const list = deps.filter(d => d.cat === k.id);
     const tot = list.reduce((s, d) => s + (d.montant || 0), 0);
     const chips = (CAT_CHIPS[k.id] || []);
-    return `
-    <section class="sec" style="--c:${CAT_COLORS[i % CAT_COLORS.length]}" aria-labelledby="h-c-${esc(k.id)}">
+    const col = CAT_COLORS[i % CAT_COLORS.length];
+    panels.push({id: 'c-' + k.id, nom: k.nom, c: col, tot, html: `
+    <section class="sec" style="--c:${col}" aria-labelledby="h-c-${esc(k.id)}">
       <div class="sec-h"><h2 id="h-c-${esc(k.id)}">${esc(k.nom)}</h2><span class="tot num">${fmt(tot)}</span></div>
       ${list.length ? list.map(d => `
         <div class="row"><span class="lbl">${esc(d.nom)}</span><span class="dots"></span><span class="fixed-amt num">${fmt(d.montant)}</span>
@@ -518,8 +603,10 @@ function renderMain(){
         <button class="btn" type="submit">Ajouter</button>
       </form>
       ${chips.length ? `<div class="chips">${chips.map(s => `<button class="chip" type="button" data-act="chip" data-cat="${esc(k.id)}" data-v="${esc(s)}">${esc(s)}</button>`).join('')}</div>` : ''}
-    </section>`;
-  }).join('');
+    </section>`});
+  });
+  let cur = panels.findIndex(p => p.id === S.panel);
+  if (cur < 0){ cur = 0; S.panel = panels[0].id; }
 
   app.innerHTML = header() + `
     <section id="hero" class="hero"></section>
@@ -529,33 +616,16 @@ function renderMain(){
       <div class="stat" style="--c:var(--sub)"><p class="k">Abonnements</p><p class="v num">${fmt(t.abos)}</p></div>
       <div class="stat" style="--c:var(--pink)"><p class="k">Dépensé ce mois</p><p class="v num">${fmt(t.depenses)}</p></div>
     </div>
-    <section class="sec" style="--c:var(--accent)" aria-labelledby="h-in">
-      <div class="sec-h"><h2 id="h-in">Entrées</h2><span class="tot num">${fmt(t.entrees)}</span></div>
-      <div class="cols" aria-hidden="true"><span>Réel</span></div>
-      ${c.entrees.map(e => `
-      <div class="row">
-        <span class="lbl">${esc(e.nom)}<small>prévu ${fmt(e.prevu)}</small></span><span class="dots"></span>
-        <input class="cell" id="in-${esc(e.id)}" inputmode="decimal" autocomplete="off" data-field="entree" data-id="${esc(e.id)}" value="${esc(amtVal(m.entrees[e.id]))}" placeholder="${esc(amtVal(e.prevu ?? 0))}" aria-label="${esc(e.nom)} réel">
-      </div>`).join('')}
-      <div class="slip"><span>${slipInfo}</span><button data-act="slip">Relire un bulletin</button></div>
-    </section>
-    ${c.fixes.length ? `
-    <section class="sec" style="--c:var(--ink)" aria-labelledby="h-fx">
-      <div class="sec-h"><h2 id="h-fx">Dépenses fixes</h2><span class="tot num">${fmt(t.fixes)}</span></div>
-      <div class="cols" aria-hidden="true"><span>Réel</span></div>
-      ${c.fixes.map(f => `
-      <div class="row">
-        <span class="lbl">${esc(f.nom)}<small>prévu ${fmt(f.prevu)}</small></span><span class="dots"></span>
-        <input class="cell" id="fx-${esc(f.id)}" inputmode="decimal" autocomplete="off" data-field="fixe" data-id="${esc(f.id)}" value="${esc(amtVal(m.fixesReel[f.id]))}" placeholder="${esc(amtVal(f.prevu ?? 0))}" aria-label="${esc(f.nom)} réel">
-      </div>`).join('')}
-    </section>` : ''}
-    ${c.abos.length ? `
-    <section class="sec" style="--c:var(--sub)" aria-labelledby="h-ab">
-      <div class="sec-h"><h2 id="h-ab">Abonnements</h2><span class="tot num">${fmt(t.abos)}</span></div>
-      ${c.abos.map(a => `<div class="row"><span class="lbl">${esc(a.nom)}</span><span class="dots"></span><span class="fixed-amt num">${fmt(a.montant)}</span></div>`).join('')}
-    </section>` : ''}
-    ${catSections}
+    <nav class="tabs" id="tabs" role="tablist" aria-label="Catégories">
+      ${panels.map((p, i) => `<button class="tab" role="tab" id="tab-${esc(p.id)}" style="--c:${p.c}" data-act="panel" data-i="${i}" aria-selected="${i === cur}" aria-controls="pn-${esc(p.id)}">${esc(p.nom)} <small class="num">${fmt(p.tot)}</small></button>`).join('')}
+    </nav>
+    <div class="slider" id="slider">
+      ${panels.map((p, i) => `<div class="panel" id="pn-${esc(p.id)}" role="tabpanel" aria-labelledby="tab-${esc(p.id)}" data-pid="${esc(p.id)}">${p.html}</div>`).join('')}
+    </div>
+    <div class="dotsnav" aria-hidden="true">${panels.map((p, i) => `<span class="${i === cur ? 'on' : ''}"></span>`).join('')}</div>
+    ${LS.get('swiped', false) ? '' : '<p class="swipe-hint">Glisse vers le côté pour passer d’une catégorie à l’autre</p>'}
     <p class="note">Connecté en tant que <b>${esc(S.user.pseudo)}</b>. Ton budget est privé.</p>`;
+  setupSlider(cur);
   renderHero();
 }
 
@@ -636,18 +706,84 @@ app.addEventListener('input', e => {
   if (W && S.view === 'wizard' && el.dataset.amt){ W.amounts[el.dataset.amt] = parseAmt(el.value); }
 });
 
+/* ---------- pages qui glissent ---------- */
+function setupSlider(cur){
+  const slider = document.getElementById('slider');
+  if (!slider) return;
+  const panels = [...slider.children];
+  const left = i => panels[i].offsetLeft - panels[0].offsetLeft;
+  slider.scrollLeft = left(cur);
+  const mark = i => {
+    const tabs = document.querySelectorAll('#tabs .tab');
+    tabs.forEach((t, j) => t.setAttribute('aria-selected', j === i));
+    document.querySelectorAll('.dotsnav span').forEach((d, j) => d.classList.toggle('on', j === i));
+    const tb = document.getElementById('tabs'), t = tabs[i];
+    if (tb && t){ const x = t.offsetLeft - tb.offsetLeft - 16; tb.scrollTo({left: Math.max(0, x - (tb.clientWidth - t.offsetWidth) / 2 + 16), behavior: 'smooth'}); }
+  };
+  mark(cur);
+  let raf = 0;
+  slider.addEventListener('scroll', () => {
+    cancelAnimationFrame(raf);
+    raf = requestAnimationFrame(() => {
+      let best = 0, d = Infinity;
+      panels.forEach((p, i) => { const dd = Math.abs(left(i) - slider.scrollLeft); if (dd < d){ d = dd; best = i; } });
+      const id = panels[best].dataset.pid;
+      if (id !== S.panel){
+        S.panel = id; mark(best);
+        if (!LS.get('swiped', false)){ LS.set('swiped', true); const h = document.querySelector('.swipe-hint'); if (h) h.remove(); }
+      }
+    });
+  }, {passive: true});
+}
+function goPanel(i){
+  const slider = document.getElementById('slider');
+  if (!slider) return;
+  const panels = [...slider.children];
+  if (!panels[i]) return;
+  const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  slider.scrollTo({left: panels[i].offsetLeft - panels[0].offsetLeft, behavior: reduce ? 'auto' : 'smooth'});
+}
+
+/* ---------- thème ---------- */
+const ACCENTS = [['bleu','#2c5ccc','Bleu'],['vert','#13805a','Vert'],['violet','#6a4fcf','Violet'],['rose','#c2417f','Rose'],['orange','#c9601f','Orange']];
+function theme(){ return {mode: 'auto', accent: 'bleu', ...LS.get('theme', {})}; }
+function applyTheme(t){
+  const r = document.documentElement;
+  if (t.mode === 'auto') r.removeAttribute('data-theme'); else r.setAttribute('data-theme', t.mode);
+  if (t.accent === 'bleu') r.removeAttribute('data-accent'); else r.setAttribute('data-accent', t.accent);
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute('content', getComputedStyle(r).getPropertyValue('--accent').trim() || '#2c5ccc');
+}
+
 /* ---------- modales ---------- */
 function openModal(html){ modalEl.innerHTML = `<div class="overlay" data-act="modal-bg"><div class="sheet" role="dialog" aria-modal="true">${html}</div></div>`; const f = modalEl.querySelector('input,button.btn'); if (f) setTimeout(() => f.focus(), 30); }
 function closeModal(){ modalEl.innerHTML = ''; if (pendingReload) setTimeout(checkUpdate, 300); }
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && modalEl.innerHTML) closeModal(); });
 function openMenu(){
-  openModal(`
-    <div class="sheet-h"><h2>Réglages</h2><button class="icon-btn" data-act="close" aria-label="Fermer">×</button></div>
-    <div class="card">
-      <button class="btn" data-act="edit-cats">Modifier mes catégories et montants</button>
-      <button class="btn light" data-act="install">Mettre l’appli sur l’écran d’accueil</button>
+  const t = theme();
+  const ic = d => `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+  modalEl.innerHTML = `<div class="overlay side" data-act="modal-bg"><nav class="drawer" role="dialog" aria-modal="true" aria-label="Menu">
+    <div class="drawer-h"><div><h2>Budget by MGM</h2><p>${esc(S.user.pseudo)}</p></div><button class="icon-btn" data-act="close" aria-label="Fermer le menu">×</button></div>
+    <div class="dgrp">
+      <h3>Réglages</h3>
+      <button class="ditem" data-act="edit-cats">${ic('<path d="M4 6h10M4 12h16M4 18h7"/><circle cx="17" cy="6" r="2"/><circle cx="14" cy="18" r="2"/>')}Mes catégories et montants</button>
+      <button class="ditem" data-act="slip-menu">${ic('<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/>')}Déposer un bulletin</button>
+      <button class="ditem" data-act="install">${ic('<rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/>')}Mettre sur l’écran d’accueil</button>
     </div>
-    <div class="card"><p>Connecté en tant que <b>${esc(S.user.pseudo)}</b></p><button class="btn light" data-act="logout">Se déconnecter</button></div>`);
+    <div class="dgrp">
+      <h3>Thème</h3>
+      <div class="seg" role="group" aria-label="Clair ou sombre">
+        ${[['auto','Auto'],['light','Clair'],['dark','Sombre']].map(([v, l]) => `<button data-act="theme" data-v="${v}" aria-pressed="${t.mode === v}">${l}</button>`).join('')}
+      </div>
+      <div class="swatches" role="group" aria-label="Couleur de l’appli">
+        ${ACCENTS.map(([v, col, l]) => `<button class="sw" style="background:${col}" data-act="accent" data-v="${v}" aria-pressed="${t.accent === v}" aria-label="${l}">${t.accent === v ? '✓' : ''}</button>`).join('')}
+      </div>
+    </div>
+    <div class="dgrp" style="margin-top:auto">
+      <button class="ditem" data-act="logout">${ic('<path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l5-5-5-5M15 12H4"/>')}Se déconnecter</button>
+    </div>
+  </nav></div>`;
+  const f = modalEl.querySelector('.icon-btn'); if (f) setTimeout(() => f.focus(), 30);
 }
 
 /* ---------- lecture du bulletin (dans le téléphone, sans envoi) ---------- */
@@ -797,6 +933,12 @@ document.addEventListener('click', e => {
   if (act === 'next') return goMonth(shiftKey(S.monKey, 1));
   if (act === 'today') return goMonth(CUR);
   if (act === 'menu') return openMenu();
+  if (act === 'panel') return goPanel(+b.dataset.i);
+  if (act === 'theme' || act === 'accent'){
+    const t = theme(); if (act === 'theme') t.mode = b.dataset.v; else t.accent = b.dataset.v;
+    LS.set('theme', t); applyTheme(t); openMenu(); return;
+  }
+  if (act === 'slip-menu'){ closeModal(); if (S.cfg) fileEl.click(); return; }
   if (act === 'logout') return logout();
   if (act === 'edit-cats'){ closeModal(); startWizard(clone(S.cfg)); return; }
   if (act === 'install'){
@@ -879,6 +1021,7 @@ app.addEventListener('change', e => {
 });
 
 /* ---------- démarrage ---------- */
+applyTheme(theme());
 S.user = LS.get('user', null);
 if (S.user) afterLogin(); else { S.view = 'auth'; render(); }
 
