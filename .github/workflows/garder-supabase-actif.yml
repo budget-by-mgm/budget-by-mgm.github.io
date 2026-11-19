@@ -1,0 +1,16 @@
+# Évite que la base Supabase gratuite se mette en pause après 7 jours sans activité.
+# Lit une ligne publique (le classement de l'appli de révision) tous les 3 jours.
+name: Garder Supabase actif
+on:
+  schedule:
+    - cron: "17 7 */3 * *"
+  workflow_dispatch:
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Petite lecture dans la base
+        run: |
+          curl -sf "https://aychipxyiebtmknwskmb.supabase.co/rest/v1/profiles?select=pseudo&limit=1" \
+            -H "apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF5Y2hpcHh5aWVidG1rbndza21iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQ5MTcxMTcsImV4cCI6MjExMDQ5MzExN30.DrSs5Rme7cNcltZ5StDnXoDT25g0mUgX-iF52t7R3D0" \
+            -o /dev/null && echo "Base active"
