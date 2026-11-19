@@ -248,6 +248,12 @@ h1,h2,h3{font-family:var(--font-display);text-wrap:balance;margin:0}
 .keypad{display:grid;grid-template-columns:repeat(3,72px);gap:14px}
 .keypad button{width:72px;height:72px;border-radius:50%;border:0;background:var(--surface);font-family:var(--font-display);font-size:28px;font-weight:700;box-shadow:0 1px 3px rgba(0,0,0,.08)}
 .keypad button.ghostk{background:none;box-shadow:none;font-size:15px;font-family:var(--font-body);font-weight:600}
+.bio-full{border:0;background:none;flex:1;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:var(--ink)}
+.bio-ic{width:96px;height:96px;border-radius:28px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center}
+.bio-t{font-family:var(--font-display);font-size:26px;font-weight:800}
+.bio-s{color:var(--muted)}
+#lock{animation:fadein .15s ease-out}
+@keyframes fadein{from{opacity:.6}to{opacity:1}}
 /* modale */
 .overlay{position:fixed;inset:0;background:rgba(10,14,22,.5);display:flex;align-items:flex-end;justify-content:center;z-index:20}
 .sheet{background:var(--bg);width:100%;max-width:560px;max-height:92%;overflow:auto;border-radius:22px 22px 0 0;padding:18px 16px calc(24px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:14px}
@@ -275,7 +281,7 @@ h1,h2,h3{font-family:var(--font-display);text-wrap:balance;margin:0}
 <div id="modal"></div>
 <div id="toast" class="toast" hidden></div>
 
-<script>window.__APP_VER__="2026.11.19-1556";</script>
+<script>window.__APP_VER__="2026.11.19-1600";</script>
 <script>
 (() => {
 "use strict";
@@ -962,8 +968,19 @@ async function bioCheck(){
 function keypad(extraLeft){
   return `<div class="keypad">${[1,2,3,4,5,6,7,8,9].map(n => `<button data-act="pin" data-v="${n}">${n}</button>`).join('')}${extraLeft || '<span></span>'}<button data-act="pin" data-v="0">0</button><button class="ghostk" data-act="pin-del" aria-label="Effacer">⌫</button></div>`;
 }
+let LOCK_PAD = false;
 function drawLock(msg){
   const lc = lockCfg();
+  if (lc && lc.bio && !LOCK_PAD){
+    lockEl.innerHTML = `
+      <button class="bio-full" data-act="bio" aria-label="Déverrouiller avec Face ID">
+        <span class="bio-ic"><svg viewBox="0 0 24 24" width="54" height="54" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><path d="M9 9v1M15 9v1M12 9v4h-1M9.5 16a3.5 3.5 0 0 0 5 0"/></svg></span>
+        <span class="bio-t">Budget by MGM</span>
+        <span class="bio-s">${esc(msg || 'Touche l’écran pour déverrouiller')}</span>
+      </button>
+      <button class="btn link" data-act="lock-pad">Utiliser mon code</button>`;
+    return;
+  }
   lockEl.innerHTML = `
     <h2>Budget by MGM</h2>
     <p>${esc(msg || 'Tape ton code')}</p>
@@ -973,8 +990,8 @@ function drawLock(msg){
 }
 function lockNow(){
   if (!lockCfg()) return;
-  locked = true; PIN = ''; lockEl.hidden = false; app.setAttribute('aria-hidden', 'true'); drawLock();
-  const lc = lockCfg(); if (lc.bio) setTimeout(async () => { if (locked && await bioCheck()) unlock(); }, 300);
+  locked = true; PIN = ''; LOCK_PAD = false; lockEl.hidden = false; app.setAttribute('aria-hidden', 'true'); drawLock();
+  const lc = lockCfg(); if (lc.bio) setTimeout(async () => { if (locked && await bioCheck()) unlock(); }, 150); // Android : se lance tout seul
 }
 function unlock(){ locked = false; tries = 0; lockEl.hidden = true; lockEl.innerHTML = ''; app.removeAttribute('aria-hidden'); }
 async function pinTyped(){
@@ -1114,20 +1131,35 @@ function num(s){
   s = s.replace(',', '.');
   const n = parseFloat(s); return isFinite(n) ? n : null;
 }
-const AMT_TOKEN = /^([+-])?(\d{1,3}(?:[ .  ]\d{3})*|\d+)[,.](\d{2})\s?€?\s?([+-])?$/;
-function amtTok(s){ const m = s.trim().match(AMT_TOKEN); if (!m) return null; return {v: parseFloat(m[2].replace(/[ .  ]/g, '') + '.' + m[3]), sign: m[1] || m[4] || ''}; }
-function parseDate(str, fallbackYear){
-  const m = str.match(/^(\d{1,2})[\/.\-](\d{1,2})(?:[\/.\-](\d{2,4}))?/);
+function amtTok(raw){
+  let t = String(raw).trim().replace(/−/g, '-');
+  if (!/\d/.test(t) || t.length > 22) return null;
+  t = t.replace(/eur\b|€/gi, '').trim();
+  const m = t.match(/^([+-])?\s*([+-])?\s*([\d .,  ']+?)\s*([+-])?$/);
   if (!m) return null;
-  const d = +m[1], mo = +m[2]; if (d < 1 || d > 31 || mo < 1 || mo > 12) return null;
-  let y = m[3] ? +m[3] : fallbackYear; if (y < 100) y += 2000;
-  return {key: y + '-' + String(mo).padStart(2, '0'), label: String(d).padStart(2, '0') + '/' + String(mo).padStart(2, '0')};
+  const n = m[3].replace(/[\s  ']/g, '');
+  const dm = n.match(/^(\d{1,3}(?:[.,]\d{3})*|\d+)[.,](\d{2})$/);
+  if (!dm) return null;
+  return {v: parseFloat(dm[1].replace(/[.,]/g, '') + '.' + dm[2]), sign: m[1] || m[2] || m[4] || ''};
+}
+const MOISN = {jan:1,janv:1,janvier:1,january:1,fev:2,fevr:2,fevrier:2,feb:2,february:2,mar:3,mars:3,march:3,avr:4,avril:4,apr:4,april:4,mai:5,may:5,jun:6,juin:6,june:6,jul:7,juil:7,juillet:7,july:7,aou:8,aout:8,aug:8,august:8,sep:9,sept:9,septembre:9,september:9,oct:10,octobre:10,october:10,nov:11,novembre:11,november:11,dec:12,decembre:12,december:12};
+function parseDate(str, fallbackYear){
+  const s0 = norm(str).trim();
+  let m, d, mo, y;
+  if ((m = s0.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/))){ y = +m[1]; mo = +m[2]; d = +m[3]; }
+  else if ((m = s0.match(/^(\d{1,2})[\/.\-](\d{1,2})(?:[\/.\-](\d{2,4}))?/))){ d = +m[1]; mo = +m[2]; y = m[3] ? +m[3] : fallbackYear; }
+  else if ((m = s0.match(/^(\d{1,2})(?:er)?\s+([a-z]{3,9})\.?(?:\s+(\d{4}))?/)) && MOISN[m[2]]){ d = +m[1]; mo = MOISN[m[2]]; y = m[3] ? +m[3] : fallbackYear; }
+  else if ((m = s0.match(/^([a-z]{3,9})\.?\s+(\d{1,2}),?(?:\s+(\d{4}))?/)) && MOISN[m[1]]){ mo = MOISN[m[1]]; d = +m[2]; y = m[3] ? +m[3] : fallbackYear; }
+  else return null;
+  if (d < 1 || d > 31 || mo < 1 || mo > 12) return null;
+  if (y < 100) y += 2000;
+  return {key: y + '-' + String(mo).padStart(2, '0'), label: String(d).padStart(2, '0') + '/' + String(mo).padStart(2, '0'), len: m[0].length};
 }
 async function pdfRows(file){
   const lib = await getPdfjs();
   const pdf = await lib.getDocument({data: await file.arrayBuffer(), isEvalSupported: false}).promise;
   const out = [];
-  for (let p = 1; p <= Math.min(pdf.numPages, 10); p++){
+  for (let p = 1; p <= Math.min(pdf.numPages, 40); p++){
     const page = await pdf.getPage(p);
     const tc = await page.getTextContent();
     const rows = [];
@@ -1143,22 +1175,26 @@ async function pdfRows(file){
   return out;
 }
 function opsFromPdf(rows, year){
-  const ops = []; let debitX = null, creditX = null, last = null;
+  const ops = []; let debitX = null, creditX = null, soldeX = null, last = null;
+  const RE_D = /^(debit|money out|argent sortant|sortant|paid out|withdrawals?|sorties?)\b/, RE_C = /^(credit|money in|argent entrant|entrant|paid in|deposits?|entrees?)\b/, RE_S = /^(solde|balance)\b/;
+  const stripDate = l => { let x = l.trim(); for (let k = 0; k < 2; k++){ const dd = parseDate(x); if (dd) x = x.slice(dd.len).trim(); } return x; };
   rows.forEach(r => {
     const txt = r.parts.map(p => p.s).join(' '), t = norm(txt);
-    const pd = r.parts.find(p => /^debit/.test(norm(p.s))), pc = r.parts.find(p => /^credit/.test(norm(p.s)));
-    if (pd && pc){ debitX = pd.xc; creditX = pc.xc; return; }
-    if (/(ancien|nouveau) solde|solde (au|crediteur|debiteur|en euros)|total des|totaux|report/.test(t)){ last = null; return; }
+    const pd = r.parts.find(p => RE_D.test(norm(p.s))), pc = r.parts.find(p => RE_C.test(norm(p.s))), ps = r.parts.find(p => RE_S.test(norm(p.s)));
+    if (pd && pc){ debitX = pd.xc; creditX = pc.xc; soldeX = ps ? ps.xc : null; return; }
+    if (/(ancien|nouveau) solde|solde (au|crediteur|debiteur|en euros|d.ouverture|de cloture)|opening balance|closing balance|total des|totaux|report|money out total|^total/.test(t)){ last = null; return; }
+    if (/(reverted|annule|refuse|declined|en attente|pending)/.test(t) && !/\d{1,2}[\/.]/.test(t.slice(0, 6))){ last = null; return; }
     const date = parseDate(txt, year);
-    let amtPart = null;
-    for (let i = r.parts.length - 1; i >= 0; i--){ const a = amtTok(r.parts[i].s); if (a){ amtPart = {...a, xc: r.parts[i].xc, i}; break; } }
+    let amts = r.parts.map((p, i) => { const a = amtTok(p.s); return a ? {...a, xc: p.xc, i} : null; }).filter(Boolean);
+    if (soldeX != null && debitX != null) amts = amts.filter(a => !(Math.abs(a.xc - soldeX) < Math.abs(a.xc - debitX) && Math.abs(a.xc - soldeX) < Math.abs(a.xc - creditX)));
+    else if (amts.length >= 2) amts = amts.slice(0, -1); // le dernier montant d'une ligne est souvent le solde
+    const amtPart = amts.length ? amts[amts.length - 1] : null;
     if (date && amtPart){
-      const label = r.parts.filter((p, i) => i !== amtPart.i && !amtTok(p.s)).map(p => p.s).join(' ')
-        .replace(/^\s*\d{1,2}[\/.\-]\d{1,2}([\/.\-]\d{2,4})?\s*/, '').replace(/^\d{1,2}[\/.\-]\d{1,2}([\/.\-]\d{2,4})?\s*/, '');
-      last = {date, label, v: amtPart.v, sign: amtPart.sign, xc: amtPart.xc, dX: debitX, cX: creditX};
+      const label = stripDate(r.parts.filter((p, i) => !amtTok(p.s)).map(p => p.s).join(' '));
+      last = {date, label: label || 'Opération', v: amtPart.v, sign: amtPart.sign, xc: amtPart.xc, dX: debitX, cX: creditX};
       ops.push(last);
-    } else if (last && !date && !amtPart && txt.length < 60){
-      last.label += ' ' + txt; last = null; // libellé sur deux lignes
+    } else if (last && !date && !amtPart && txt.length < 70){
+      if (last.label === 'Opération') last.label = txt; else last.label += ' ' + txt; last = null; // libellé sur deux lignes
     }
   });
   // Pas d'en-tête Débit/Crédit lu : on regarde si les montants sont rangés dans deux colonnes
@@ -1197,25 +1233,34 @@ function splitCSV(line, d){
 }
 function opsFromCsv(text, year){
   const lines = text.replace(/^﻿/, '').split(/\r?\n/).filter(l => l.trim());
-  let hi = lines.findIndex(l => /date/i.test(l) && /(montant|debit|débit|amount|credit)/i.test(l));
+  let hi = lines.findIndex(l => /date/i.test(l) && /(montant|debit|débit|amount|credit|sortant|money out)/i.test(l));
   if (hi < 0) return [];
   const d = (lines[hi].split(';').length >= lines[hi].split(',').length) ? ';' : ',';
   const h = splitCSV(lines[hi], d).map(norm);
   const col = re => h.findIndex(x => re.test(x));
-  const iDate = col(/date/), iLab = col(/libelle|description|operation|label|detail/), iAmt = col(/montant|amount/), iDeb = col(/debit/), iCre = col(/credit/);
+  const iDone = col(/completed date|date de fin|date d.execution|date operation|date de l.operation/);
+  const iDate = iDone >= 0 ? iDone : col(/date/);
+  const iLab = col(/libelle|description|operation|label|detail|beneficiaire|payee/), iAmt = col(/^montant|^amount/);
+  const iDeb = col(/debit|sortant|money out|paid out/), iCre = col(/credit|entrant|money in|paid in/);
+  const iFee = col(/^frais|^fee/), iState = col(/^etat|^state|^statut|^status/), iType = col(/^type/);
   const ops = [];
   lines.slice(hi + 1).forEach(l => {
     const c = splitCSV(l, d);
+    if (iState >= 0 && /(revert|declin|fail|annul|refus|pending|attente)/.test(norm(c[iState]))) return;
+    if (iType >= 0 && /^(exchange|echange|change)$/.test(norm(c[iType]))) return; // conversion de devises dans Revolut
     const date = parseDate(c[iDate] || '', year); if (!date) return;
     let v = null, debit = true;
     if (iAmt >= 0 && c[iAmt]){ v = num(c[iAmt]); if (v == null) return; debit = v < 0; v = Math.abs(v); }
     else { const de = iDeb >= 0 ? num(c[iDeb]) : null, cr = iCre >= 0 ? num(c[iCre]) : null; if (de){ v = Math.abs(de); debit = true; } else if (cr){ v = Math.abs(cr); debit = false; } else return; }
+    const fee = iFee >= 0 ? Math.abs(num(c[iFee]) || 0) : 0;
+    if (debit && fee) v = Math.round((v + fee) * 100) / 100;
+    if (!v) return;
     ops.push({date, label: (iLab >= 0 ? c[iLab] : c.filter((_, i) => i !== iDate).join(' ')) || 'Opération', v, debit});
   });
   return ops;
 }
 const DOUBT = [
-  ['virement', /(\bvir\b|virement|\bvers\b|livret|epargne|\blep\b|\bldd\b|\bpel\b|\bcel\b|assurance vie|compte joint|transfert)/,
+  ['virement', /(\bvir\b|virement|\bvers\b|livret|epargne|\blep\b|\bldd\b|\bpel\b|\bcel\b|assurance vie|compte joint|transfert|coffre|vault|pocket|savings|to eur|to usd)/,
     'Virement', 'Est-ce que c’est vraiment une dépense, ou juste un virement entre tes comptes (livret, épargne, autre compte) ?',
     [['non', 'Virement entre mes comptes'], ['oui', 'C’est une vraie dépense']]],
   ['retrait', /(retrait|\bdab\b|distributeur|\bgab\b)/,
@@ -1611,7 +1656,8 @@ document.addEventListener('click', e => {
     return;
   }
   if (act === 'pin-del'){ if (locked){ PIN = PIN.slice(0, -1); drawLock(); } else if (SETPIN){ SETPIN.cur = SETPIN.cur.slice(0, -1); drawSetPin(); } return; }
-  if (act === 'bio'){ bioCheck().then(ok => { if (ok) unlock(); }); return; }
+  if (act === 'bio'){ bioCheck().then(ok => { if (ok) unlock(); else if (!LOCK_PAD){ drawLock('Pas reconnu. Touche pour réessayer, ou utilise ton code.'); } }); return; }
+  if (act === 'lock-pad'){ LOCK_PAD = true; drawLock(); return; }
   if (act === 'lock-forgot'){ LS.set(lockKey(), null); unlock(); logout(); return; }
   if (act === 'pin-change'){ SETPIN = {step: 1, first: '', cur: ''}; drawSetPin(); return; }
   if (act === 'pin-off'){ LS.set(lockKey(), null); closeModal(); toast('Verrouillage désactivé'); return; }
@@ -1760,7 +1806,7 @@ S.user = LS.get('user', null);
 const hashLogin = readAuthHash();
 if (RECOVERY){ S.view = 'auth'; render(); }
 else if (hashLogin){ S.view = 'auth'; render(); }
-else if (S.user){ afterLogin(); lockNow(); } else { S.view = 'auth'; render(); }
+else if (S.user){ lockNow(); afterLogin(); } else { S.view = 'auth'; render(); }
 
 /* ---------- mise à jour automatique (même quand l'appli est sur l'écran d'accueil) ---------- */
 function busyNow(){ return S.view === 'wizard' || !!modalEl.innerHTML || inputFocused(); }
