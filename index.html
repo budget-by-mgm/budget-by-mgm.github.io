@@ -327,7 +327,7 @@ textarea.qtext{min-height:110px;resize:vertical;font:inherit}
 <div id="modal"></div>
 <div id="toast" class="toast" hidden></div>
 
-<script>window.__APP_VER__="2026.11.19-1621";</script>
+<script>window.__APP_VER__="2026.11.19-1635";</script>
 <script>
 (() => {
 "use strict";
@@ -540,7 +540,7 @@ function renderAuth(){
     <section class="auth">
       <div><p class="eyebrow">Budget by MGM</p><h1>Ton budget,<br><span>dans ta poche.</span></h1></div>
       <p class="lead">${m === 'forgot' ? 'Tape ton adresse e-mail : tu vas recevoir un lien pour choisir un nouveau mot de passe.' : m === 'newpass' ? 'Choisis ton nouveau mot de passe.' : 'Connecte-toi pour retrouver ton budget sur tous tes appareils.'}</p>
-      <form class="card" id="auth-form" autocomplete="on">
+      <form class="card" id="auth-form" autocomplete="on" novalidate>
         <h2 style="font-size:20px">${titles[m]}</h2>
         ${m !== 'newpass' ? `<div class="field"><label for="em">Adresse e-mail</label><input id="em" type="${m === 'login' ? 'text' : 'email'}" inputmode="email" autocomplete="email" autocapitalize="none" spellcheck="false" placeholder="toi@exemple.fr">${m === 'login' ? '<small>Ancien compte avec un pseudo ? Tape ton pseudo ici.</small>' : ''}</div>` : ''}
         ${m !== 'forgot' ? `<div class="field"><label for="pw">${m === 'newpass' ? 'Nouveau mot de passe' : 'Mot de passe'}</label><input id="pw" type="password" autocomplete="${m === 'login' ? 'current-password' : 'new-password'}"><small>6 caractères minimum</small></div>` : ''}
@@ -1483,7 +1483,7 @@ function guessCat(label){
 }
 function cleanLabel(l){
   let t = l.replace(/\b(paiement|achat|prlv|prelevement|sepa|carte|cb|par|facture|du)\b/gi, ' ')
-    .replace(/\bx?\*?\d{4,}\b/g, ' ').replace(/\b\d{1,2}[\/.]\d{1,2}([\/.]\d{2,4})?\b/g, ' ').replace(/\s+/g, ' ').trim();
+    .replace(/\b[x*]*\d{4,}\b/gi, ' ').replace(/\b(x\d{3,})\b/gi, ' ').replace(/\b\d{1,2}[\/.]\d{1,2}([\/.]\d{2,4})?\b/g, ' ').replace(/\s+/g, ' ').trim();
   if (!t) t = l.trim();
   t = t.toLowerCase().replace(/(^|\s)\S/g, c => c.toUpperCase());
   return t.slice(0, 40);
@@ -1639,6 +1639,14 @@ function stemKey(label){
     .replace(/\s+/g, ' ').trim().split(' ').slice(0, 4).join(' ');
 }
 function rules(){ const r = (S.cfg && S.cfg.releve) || {}; return {non: r.non || [], oui: r.oui || []}; }
+// Reconnaître un abonnement ou une dépense fixe par son nom, sur des mots qui veulent vraiment dire quelque chose
+const NAME_ALIAS = {psplus: /playstation|\bpsn\b|ps ?plus/, gamepass: /xbox|game ?pass/, primevideo: /amazon prime|amzn prime|prime video/, icloud: /icloud|apple\.com/, canal: /canal/, youtube: /youtube|google youtube/, sport: /basic ?fit|fitness|keep ?cool|on air|salle de sport/, logement: /loyer|bail|agence|immo/, telephone: /free mobile|sfr|orange|bouygues|sosh|red by|b&you/, box: /free telecom|freebox|livebox|bbox|sfr box/, electricite: /edf|engie|total ?energies? (elec|gaz)|eni\b/, assurance: /assurance|maif|macif|matmut|axa|allianz/, mutuelle: /mutuelle|harmonie/, transport: /navigo|ratp|sncf|tcl|tisseo|rtm/, credit: /pret|credit|echeance/};
+const GENERIC = new Set(['plus','premium','abonnement','mobile','pass','game','prime','video','music','family','famille','maison','courses','depenses','epargne','salle','sport','forfait','telephone','internet','assurances','transports','credit','loyer','nourriture','essence','electricite']);
+function nameMatch(x, t){
+  if (x.id && NAME_ALIAS[x.id]) return NAME_ALIAS[x.id].test(t);
+  const w = norm(x.nom).split(/[^a-z0-9]+/).filter(z => z.length >= 4 && !GENERIC.has(z));
+  return w.length > 0 && w.some(z => new RegExp('\\b' + z).test(t));
+}
 function analyseBank(ops){
   const m = mon(), c = S.cfg, mk = S.monKey;
   const incomes = c.entrees.map(e => m.entrees && m.entrees[e.id] != null ? m.entrees[e.id] : e.prevu).filter(v => v > 0);
@@ -1647,15 +1655,15 @@ function analyseBank(ops){
   const inMonth = debits.filter(o => o.date.key === mk);
   const other = debits.length - inMonth.length;
   const known = [];
-  c.fixes.forEach(f => known.push({nom: f.nom, v: m.fixesReel[f.id] ?? f.prevu}));
-  c.abos.forEach(a => known.push({nom: a.nom, v: a.montant, abo: a.id}));
+  c.fixes.forEach(f => known.push({nom: f.nom, v: m.fixesReel[f.id] ?? f.prevu, id: f.id}));
+  c.abos.forEach(a => known.push({nom: a.nom, v: a.montant, abo: a.id, id: a.id}));
   (m.depenses || []).forEach(d => known.push({nom: d.nom, v: d.montant}));
   const used = new Set();
   const items = inMonth.map((o, i) => {
     const t = norm(o.label);
     let k = known.findIndex((x, j) => !used.has(j) && x.v != null && Math.abs(x.v - o.v) < 0.01);
     let byName = false;
-    if (k < 0){ k = known.findIndex((x, j) => { if (used.has(j)) return false; const w = norm(x.nom).split(/[\s(\/+]/).filter(z => z.length >= 4)[0]; return w && t.includes(w); }); byName = k >= 0; }
+    if (k < 0){ k = known.findIndex((x, j) => !used.has(j) && nameMatch(x, t)); byName = k >= 0; }
     if (k >= 0){ used.add(k); return {i, ...o, noted: true, avec: known[k].nom, abo: known[k].abo, prixChange: byName && known[k].abo && Math.abs(known[k].v - o.v) >= 0.01 ? known[k].v : null}; }
     return {i, ...o, noted: false, cat: guessCat(o.label), nom: cleanLabel(o.label), pick: true};
   });
@@ -2189,9 +2197,19 @@ app.addEventListener('change', e => {
   saveMon(m);
 });
 
+/* ---------- accès pour les tests automatiques (lecture seule) ---------- */
+window.__dbg = {get bank(){ return BANK; }, get files(){ return BANK_FILES; }, get ops(){ return BANK_OPS; }, get S(){ return S; }};
+
 /* ---------- démarrage ---------- */
 applyTheme(theme());
 S.user = LS.get('user', null);
+window.addEventListener('hashchange', () => {
+  if (!/access_token=|error_description=/.test(location.hash)) return;
+  const r = readAuthHash();
+  if (RECOVERY){ closeModal(); unlock(); S.view = 'auth'; render(); }
+  else if (r){ S.view = 'auth'; render(); }
+  else render();
+});
 const hashLogin = readAuthHash();
 if (RECOVERY){ S.view = 'auth'; render(); }
 else if (hashLogin){ S.view = 'auth'; render(); }
