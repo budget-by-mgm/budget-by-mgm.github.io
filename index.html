@@ -80,7 +80,7 @@ h1,h2,h3{font-family:var(--font-display);text-wrap:balance;margin:0}
 .hero{border-radius:22px;padding:20px 20px 18px;background:var(--good-soft);display:flex;flex-direction:column;gap:10px}
 .hero.neg{background:var(--bad-soft)}
 .hero-k{margin:0;font-weight:600;color:var(--muted);font-size:14px}
-.big{margin:0;font-family:var(--font-display);font-weight:800;font-size:clamp(46px,15vw,78px);line-height:.95;letter-spacing:-.035em;color:var(--good)}
+.big{margin:0;font-family:var(--font-display);font-weight:800;font-size:clamp(34px,15vw,78px);overflow-wrap:anywhere;line-height:.95;letter-spacing:-.035em;color:var(--good)}
 .hero.neg .big{color:var(--bad)}
 .hero-sub{margin:0;font-size:14px}
 .meter{height:10px;border-radius:999px;background:color-mix(in srgb,var(--ink) 10%,transparent);overflow:hidden}
@@ -91,7 +91,7 @@ h1,h2,h3{font-family:var(--font-display);text-wrap:balance;margin:0}
 .stat{background:var(--surface);border-radius:14px;padding:10px 12px;border-left:4px solid var(--c)}
 .stat p{margin:0}
 .stat .k{font-size:13px;color:var(--muted);font-weight:600}
-.stat .v{font-family:var(--font-display);font-weight:700;font-size:20px}
+.stat .v{font-family:var(--font-display);font-weight:700;font-size:clamp(15px, 5vw, 20px);overflow-wrap:anywhere}
 .btn{border:0;border-radius:12px;padding:11px 16px;font-weight:700;background:var(--accent);color:var(--on-accent)}
 .btn.light{background:var(--surface);color:var(--ink);border:1px solid var(--line)}
 .btn.link{background:none;color:var(--accent);padding:11px 6px}
@@ -104,10 +104,12 @@ h1,h2,h3{font-family:var(--font-display);text-wrap:balance;margin:0}
 .cols{display:flex;justify-content:flex-end;font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em}
 .cols span{width:104px;text-align:right}
 .row{display:flex;align-items:center;gap:8px;padding:5px 0;min-height:44px}
-.lbl{flex:0 1 auto;min-width:0;overflow-wrap:anywhere}
+.lbl{flex:1 1 auto;min-width:min(48%, 150px);overflow-wrap:break-word;word-break:normal;hyphens:auto}
+.row{flex-wrap:wrap}
+.row .fixed-amt{margin-left:auto}
 .lbl small{display:block;color:var(--muted);font-size:13px}
-.dots{flex:1 1 12px;min-width:12px;align-self:center;border-bottom:2px dotted var(--line);height:0;margin-top:6px}
-.fixed-amt{flex:none;font-weight:600}
+.dots{flex:0 1 40px;min-width:8px;align-self:center;border-bottom:2px dotted var(--line);height:0;margin-top:6px}
+.fixed-amt{flex:none;font-weight:600;white-space:nowrap}
 .cell{flex:none;width:104px;text-align:right;border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:8px 10px;font-variant-numeric:tabular-nums;font-weight:600}
 .cell::placeholder{color:var(--muted);font-weight:500;opacity:.8}
 .cell:focus{background:var(--surface);border-color:var(--accent);outline:none;box-shadow:0 0 0 3px var(--accent-soft)}
@@ -234,7 +236,7 @@ h1,h2,h3{font-family:var(--font-display);text-wrap:balance;margin:0}
 .check input{width:22px;height:22px;accent-color:var(--accent);flex:none;margin-top:1px}
 .abo-row:first-of-type{border-top:0}
 .abo-ic{width:36px;height:36px;border-radius:10px;background:var(--sub-soft);color:var(--sub);display:grid;place-items:center;font-weight:800;font-family:var(--font-display);flex:none}
-.abo-row .l{flex:1;min-width:0;font-weight:600}
+.abo-row .l{flex:1;min-width:0;font-weight:600;overflow-wrap:break-word}
 .abo-row .l small{display:block;font-weight:500;color:var(--muted);font-size:12px}
 .abo-row .soon{color:var(--sub);font-weight:700}
 .abo-year{display:flex;justify-content:space-between;align-items:baseline;background:var(--sub-soft);border-radius:12px;padding:10px 12px;margin:4px 0 6px;font-size:14px}
@@ -243,7 +245,8 @@ h1,h2,h3{font-family:var(--font-display);text-wrap:balance;margin:0}
 .sres{display:flex;flex-direction:column}
 .sres button{display:flex;gap:10px;align-items:center;border:0;background:none;text-align:left;padding:10px 0;border-top:1px solid var(--line);width:100%}
 .sres button:first-child{border-top:0}
-.sres .l{flex:1;min-width:0;font-weight:600}
+.sres .l{flex:1;min-width:0;font-weight:600;overflow-wrap:break-word}
+.sres b{white-space:nowrap}
 .sres .l small{display:block;color:var(--muted);font-weight:500;font-size:12px}
 /* verrouillage */
 #lock{position:fixed;inset:0;z-index:60;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:24px}
@@ -276,7 +279,7 @@ h1,h2,h3{font-family:var(--font-display);text-wrap:balance;margin:0}
 /* objectifs */
 .goal{border:0;background:none;width:100%;text-align:left;padding:10px 0;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:6px}
 .goal:first-of-type{border-top:0}
-.goal .t{display:flex;justify-content:space-between;gap:8px;font-weight:700}
+.goal .t{display:flex;justify-content:space-between;gap:8px;font-weight:700;flex-wrap:wrap}
 .goal .bar{height:9px;border-radius:999px;background:var(--bg);overflow:hidden}
 .goal .bar span{display:block;height:100%;background:var(--good);border-radius:999px}
 .goal small{color:var(--muted);font-size:12px}
@@ -309,7 +312,7 @@ textarea.qtext{min-height:110px;resize:vertical;font:inherit}
 .badge{margin-left:auto;background:var(--bad);color:#fff;border-radius:999px;font-size:12px;font-weight:800;padding:1px 8px}
 /* modale */
 .overlay{position:fixed;inset:0;background:rgba(10,14,22,.5);display:flex;align-items:flex-end;justify-content:center;z-index:20}
-.sheet{background:var(--bg);width:100%;max-width:560px;max-height:92%;overflow:auto;border-radius:22px 22px 0 0;padding:18px 16px calc(24px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:14px}
+.sheet{overflow-x:hidden;background:var(--bg);width:100%;max-width:560px;max-height:92%;overflow:auto;border-radius:22px 22px 0 0;padding:18px 16px calc(24px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:14px}
 @media (min-width:600px){.overlay{align-items:center}.sheet{border-radius:22px}}
 .sheet-h{display:flex;justify-content:space-between;align-items:center;gap:8px}
 .sheet-h h2{font-size:21px}
@@ -319,7 +322,7 @@ textarea.qtext{min-height:110px;resize:vertical;font:inherit}
 .spinner{width:34px;height:34px;border-radius:50%;border:4px solid var(--accent-soft);border-top-color:var(--accent);animation:spin .9s linear infinite;margin:6px auto}
 @keyframes spin{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion: reduce){.spinner{animation-duration:3s}.meter span{transition:none}}
-.toast{position:fixed;left:50%;top:calc(14px + env(safe-area-inset-top));transform:translateX(-50%);box-shadow:0 8px 24px rgba(0,0,0,.2);text-align:center;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;font-weight:600;z-index:30;max-width:calc(100% - 32px)}
+.toast{position:fixed;left:16px;right:16px;margin:0 auto;width:fit-content;max-width:min(520px, calc(100% - 32px));overflow-wrap:break-word;top:calc(14px + env(safe-area-inset-top));box-shadow:0 8px 24px rgba(0,0,0,.2);text-align:center;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;font-weight:600;z-index:30;max-width:calc(100% - 32px)}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 </style>
 </head>
@@ -334,7 +337,7 @@ textarea.qtext{min-height:110px;resize:vertical;font:inherit}
 <div id="modal"></div>
 <div id="toast" class="toast" hidden></div>
 
-<script>window.__APP_VER__="2026.11.19-1724";</script>
+<script>window.__APP_VER__="2026.11.19-1746";</script>
 <script>
 (() => {
 "use strict";
@@ -623,8 +626,8 @@ function logout(){ AUTH_MODE = 'login'; LS.set('user', null); S.user = null; S.c
 /* ---------- calculs ---------- */
 function mon(){ const m = S.mon || {}; return {entrees: {}, fixesReel: {}, depenses: [], ...m}; }
 function salaireReel(m){ return (m.entrees || {}).salaire ?? null; }
-function totals(){
-  const c = S.cfg, m = mon();
+function totals(mm){
+  const c = S.cfg, m = mm ? {entrees: {}, fixesReel: {}, depenses: [], ...mm} : mon();
   let estime = false;
   const entrees = c.entrees.reduce((s, e) => { const r = m.entrees[e.id]; if (r == null) estime = true; return s + (r ?? e.prevu ?? 0); }, 0);
   const fixes = c.fixes.reduce((s, f) => s + (m.fixesReel[f.id] ?? f.prevu ?? 0), 0);
@@ -1156,6 +1159,59 @@ async function drawBilan(){
       <button class="btn" data-act="bilan-done">Terminer</button></div>`);
   }
 }
+/* ---------- résumé d'un mois, consultable à tout moment ---------- */
+let RESUME = {k: null, all: null};
+async function openResume(k){
+  RESUME.k = k || bilanTarget() || S.monKey;
+  openModal(`<div class="sheet-h"><h2>Bilan du mois</h2><button class="icon-btn" data-act="close" aria-label="Fermer">×</button></div><div class="card"><div class="spinner" aria-hidden="true"></div></div>`);
+  RESUME.all = await loadAllMonths().catch(() => ({}));
+  if (S.mon) RESUME.all[S.monKey] = S.mon;
+  drawResume();
+}
+function drawResume(){
+  const all = RESUME.all || {}, k = RESUME.k;
+  const months = Object.keys(all).filter(x => all[x] && ((all[x].entrees || {}).salaire != null || (all[x].depenses || []).length)).sort().reverse();
+  if (!months.includes(k)) months.unshift(k);
+  const m = all[k] || {}, prevK = shiftKey(k, -1), prev = all[prevK];
+  const unlocked = (m.entrees || {}).salaire != null;
+  const mois = monthLabel(k, false).toLowerCase();
+  let body;
+  if (!unlocked){
+    body = `<p class="meta">${esc(monthLabel(k))} n’est pas encore débloqué : dépose le bulletin de ce mois pour voir son bilan.</p>`;
+  } else {
+    const t = totals(m), tp = prev && (prev.entrees || {}).salaire != null ? totals(prev) : null;
+    const sumCat = (mm, id) => ((mm && mm.depenses) || []).filter(d => d.cat === id).reduce((a, d) => a + (d.montant || 0), 0);
+    const cats = S.cfg.cats.map((c, i) => ({c, i, v: sumCat(m, c.id), p: prev ? sumCat(prev, c.id) : null})).filter(x => x.v > 0).sort((a, b) => b.v - a.v);
+    const totCat = cats.reduce((a, x) => a + x.v, 0) || 1;
+    const bl = m.bilan;
+    const up = cats.filter(x => x.p != null && x.v - x.p >= 15).sort((a, b) => (b.v - b.p) - (a.v - a.p))[0];
+    body = `
+      <div class="hero${t.reste < 0 ? ' neg' : ''}" style="padding:14px 16px">
+        <p class="hero-k">Reste en ${esc(mois)} d’après l’appli</p>
+        <p class="big num" style="font-size:40px">${fmt(t.reste)}</p>
+      </div>
+      <div>
+        <div class="kpi"><span>Entrées</span><b class="num">${fmt(t.entrees)}</b></div>
+        <div class="kpi"><span>Fixes + abonnements</span><b class="num">${fmt(t.fixes + t.abos)}</b></div>
+        <div class="kpi"><span>Dépenses du mois (${(m.depenses || []).length})</span><b class="num">${fmt(t.depenses)}</b></div>
+        ${tp ? `<div class="kpi"><span>Dépenses par rapport à ${esc(monthLabel(prevK, false).toLowerCase())}</span><b class="num" style="color:${t.depenses > tp.depenses ? 'var(--bad)' : 'var(--good)'}">${t.depenses > tp.depenses ? '+' : '−'} ${fmt(Math.abs(t.depenses - tp.depenses))}</b></div>` : ''}
+        ${bl ? `<div class="kpi"><span>Tu as fini le mois</span><b>${bl.positif === 'oui' ? 'dans le positif 🙂' : bl.positif === 'non' ? 'à découvert' : '—'}</b></div>` : ''}
+        ${bl && bl.reel != null ? `<div class="kpi"><span>Reste réel sur ton compte</span><b class="num" style="color:${bl.reel < 0 ? 'var(--bad)' : 'var(--good)'}">${fmt(bl.reel)}</b></div>` : ''}
+        ${bl && bl.reel != null && Math.abs(bl.reel - (bl.prevu ?? t.reste)) >= 5 ? `<div class="kpi"><span>Écart avec l’appli</span><b class="num">${bl.reel - (bl.prevu ?? t.reste) > 0 ? '+' : '−'} ${fmt(Math.abs(bl.reel - (bl.prevu ?? t.reste)))}</b></div>` : ''}
+      </div>
+      ${up ? `<p class="warn">${esc(up.c.nom)} : <b>+ ${fmt(up.v - up.p)}</b> par rapport au mois d’avant.</p>` : ''}
+      ${cats.length ? `<p><b>Où sont partis tes ${fmt(t.depenses)}</b></p>${cats.map(x => `
+        <div class="goal" style="padding:6px 0"><div class="t"><span>${esc(x.c.nom)}</span><span class="num">${fmt(x.v)} · ${Math.round(x.v / totCat * 100)} %</span></div>
+        <div class="bar"><span style="width:${Math.round(x.v / totCat * 100)}%;background:${CAT_COLORS[x.i % CAT_COLORS.length]}"></span></div></div>`).join('')}` : '<p class="meta">Aucune dépense notée ce mois-là.</p>'}
+      <button class="btn${bl ? ' light' : ''}" data-act="resume-bilan">${bl ? 'Refaire le bilan de ' + esc(mois) : 'Faire le bilan de ' + esc(mois)}</button>`;
+  }
+  openModal(`
+    <div class="sheet-h"><h2>Bilan du mois</h2><button class="icon-btn" data-act="close" aria-label="Fermer">×</button></div>
+    <select id="resume-month" class="qtext" aria-label="Choisir le mois">${months.map(x => `<option value="${x}"${x === k ? ' selected' : ''}>${esc(monthLabel(x))}${all[x] && all[x].bilan ? ' ✓' : ''}</option>`).join('')}</select>
+    <div class="card">${body}</div>`);
+}
+modalEl.addEventListener('change', e => { if (e.target.id === 'resume-month'){ RESUME.k = e.target.value; drawResume(); } });
+
 function bilanSave(){
   const b = BILAN; if (!b) return;
   if (S.monKey === b.key){ const m = clone(mon()); m.bilan = {positif: b.pos || null, reel: b.reel ?? null, prevu: Math.round(b.prevu * 100) / 100, le: new Date().toISOString().slice(0, 10)}; saveMon(m); }
@@ -1742,6 +1798,7 @@ function bankQuestion(){
   openModal(`
     <div class="sheet-h"><h2>Question ${r.q + 1} sur ${r.questions.length}</h2><button class="icon-btn" data-act="close" aria-label="Fermer">×</button></div>
     <div class="steps" aria-hidden="true">${r.questions.map((_, i) => `<span class="${i <= r.q ? 'on' : ''}"></span>`).join('')}</div>
+    ${BANK_FAILS.length && r.q === 0 ? `<p class="warn">Pas réussi à lire : ${BANK_FAILS.map(esc).join(', ')}. Les autres relevés sont bien lus. Essaie le format CSV pour ${BANK_FAILS.length > 1 ? 'ceux-là' : 'celui-là'}.</p>` : ''}
     <div class="card">
       <p class="eyebrow">${esc(d[2])}</p>
       <p style="font-family:var(--font-display);font-size:22px;font-weight:800;line-height:1.15">${esc(cleanLabel(its[0].label))}</p>
@@ -2069,7 +2126,8 @@ document.addEventListener('click', e => {
   if (act === 'goal-edit') return goalSheet(b.dataset.id);
   if (act === 'goal-del'){ const cfg = clone(S.cfg); cfg.objectifs = (cfg.objectifs || []).filter(g => g.id !== b.dataset.id); saveCfg(cfg); closeModal(); render(); toast('Objectif supprimé'); return; }
   if (act === 'goal-take'){ const v = parseAmt(document.getElementById('ga-amt').value); if (v == null || Number.isNaN(v) || v <= 0){ toast('Écris d’abord le montant à retirer.'); return; } goalAdd(b.dataset.id, -v); closeModal(); render(); toast('− ' + fmt(v) + ' retiré de l’objectif'); return; }
-  if (act === 'bilan'){ closeModal(); const k = bilanTarget() || S.monKey; if (S.monKey !== k){ goMonth(k); waitMonth(k).then(openBilan); } else openBilan(); return; }
+  if (act === 'bilan'){ openResume(null); return; }
+  if (act === 'resume-bilan'){ const k = RESUME.k; closeModal(); if (S.monKey !== k){ goMonth(k); waitMonth(k).then(openBilan); } else openBilan(); return; }
   if (act === 'bilan-pos'){ BILAN.pos = b.dataset.v; BILAN.sign = b.dataset.v === 'non' ? '-' : '+'; BILAN.step = 2; drawBilan(); return; }
   if (act === 'bi-sign'){
     BILAN.sign = b.dataset.v;
@@ -2081,7 +2139,8 @@ document.addEventListener('click', e => {
   if (act === 'bilan-next'){ BILAN.step = 4; drawBilan(); return; }
   if (act === 'bilan-releve'){ bilanSave(); BILAN = null; BANK_MONTH = S.monKey; bankIntro(''); return; }
   if (act === 'bilan-newgoal'){ goalSheet(null); return; }
-  if (act === 'bilan-done' || act === 'bilan-close'){ bilanSave(); BILAN = null; closeModal(); return; }
+  if (act === 'bilan-done'){ const k = BILAN.key; bilanSave(); BILAN = null; setTimeout(() => openResume(k), 300); return; }
+  if (act === 'bilan-close'){ bilanSave(); BILAN = null; closeModal(); return; }
   if (act === 'q-cat'){ Q.cat = b.dataset.id; Q.manual = true; quickMark(); return; }
   if (act === 'search') return openSearch();
   if (act === 's-go'){ closeModal(); S.panel = 'c-' + b.dataset.cat; if (b.dataset.k !== S.monKey) goMonth(b.dataset.k); else render(); return; }
