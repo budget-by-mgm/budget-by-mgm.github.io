@@ -334,7 +334,7 @@ textarea.qtext{min-height:110px;resize:vertical;font:inherit}
 <div id="modal"></div>
 <div id="toast" class="toast" hidden></div>
 
-<script>window.__APP_VER__="2026.11.19-1659";</script>
+<script>window.__APP_VER__="2026.11.19-1724";</script>
 <script>
 (() => {
 "use strict";
@@ -1110,8 +1110,12 @@ async function drawBilan(){
   } else if (b.step === 2){
     openModal(head + `<form class="card" id="bilan-reel" autocomplete="off">
       <p class="big-q">Combien il te reste vraiment sur ton compte ?</p>
-      <p class="meta">Regarde ton appli de banque. ${b.pos === 'non' ? 'Mets un « - » si tu es à découvert (ex. -45).' : ''} C’est facultatif.</p>
-      <div class="found"><input id="bi-reel" inputmode="decimal" placeholder="${esc(amtVal(Math.round(b.prevu)))}" aria-label="Ce qui reste sur ton compte"><strong>€</strong></div>
+      <p class="meta">Regarde ton appli de banque. C’est facultatif.</p>
+      <div class="fb-btns" role="group" aria-label="Positif ou à découvert">
+        <button type="button" data-act="bi-sign" data-v="+" aria-pressed="${b.sign !== '-'}">➕ Dans le positif</button>
+        <button type="button" data-act="bi-sign" data-v="-" aria-pressed="${b.sign === '-'}">➖ À découvert</button>
+      </div>
+      <div class="found"><strong id="bi-signe" style="font-size:28px;color:${b.sign === '-' ? 'var(--bad)' : 'var(--good)'}">${b.sign === '-' ? '−' : '+'}</strong><input id="bi-reel" inputmode="decimal" placeholder="${esc(amtVal(Math.abs(Math.round(b.prevu))))}" aria-label="Ce qui reste sur ton compte, sans le signe"><strong>€</strong></div>
       <button class="btn" type="submit">Continuer</button>
       <button class="btn link" type="button" data-act="bilan-skip">Passer</button></form>`);
   } else if (b.step === 3){
@@ -1264,7 +1268,7 @@ modalEl.addEventListener('submit', e => {
   }
   if (f.id === 'bilan-reel'){
     e.preventDefault();
-    const v = parseAmt(document.getElementById('bi-reel').value); BILAN.reel = v == null || Number.isNaN(v) ? null : v;
+    const v = parseAmt(document.getElementById('bi-reel').value); BILAN.reel = v == null || Number.isNaN(v) ? null : (BILAN.sign === '-' ? -Math.abs(v) : Math.abs(v));
     BILAN.step = 3; drawBilan(); return;
   }
   if (f.id === 'bilan-save'){
@@ -2066,7 +2070,13 @@ document.addEventListener('click', e => {
   if (act === 'goal-del'){ const cfg = clone(S.cfg); cfg.objectifs = (cfg.objectifs || []).filter(g => g.id !== b.dataset.id); saveCfg(cfg); closeModal(); render(); toast('Objectif supprimé'); return; }
   if (act === 'goal-take'){ const v = parseAmt(document.getElementById('ga-amt').value); if (v == null || Number.isNaN(v) || v <= 0){ toast('Écris d’abord le montant à retirer.'); return; } goalAdd(b.dataset.id, -v); closeModal(); render(); toast('− ' + fmt(v) + ' retiré de l’objectif'); return; }
   if (act === 'bilan'){ closeModal(); const k = bilanTarget() || S.monKey; if (S.monKey !== k){ goMonth(k); waitMonth(k).then(openBilan); } else openBilan(); return; }
-  if (act === 'bilan-pos'){ BILAN.pos = b.dataset.v; BILAN.step = 2; drawBilan(); return; }
+  if (act === 'bilan-pos'){ BILAN.pos = b.dataset.v; BILAN.sign = b.dataset.v === 'non' ? '-' : '+'; BILAN.step = 2; drawBilan(); return; }
+  if (act === 'bi-sign'){
+    BILAN.sign = b.dataset.v;
+    modalEl.querySelectorAll('[data-act="bi-sign"]').forEach(x => x.setAttribute('aria-pressed', x.dataset.v === BILAN.sign));
+    const sg = document.getElementById('bi-signe'); if (sg){ sg.textContent = BILAN.sign === '-' ? '−' : '+'; sg.style.color = BILAN.sign === '-' ? 'var(--bad)' : 'var(--good)'; }
+    return;
+  }
   if (act === 'bilan-skip'){ BILAN.reel = null; BILAN.step = 3; drawBilan(); return; }
   if (act === 'bilan-next'){ BILAN.step = 4; drawBilan(); return; }
   if (act === 'bilan-releve'){ bilanSave(); BILAN = null; BANK_MONTH = S.monKey; bankIntro(''); return; }
