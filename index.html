@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Budget by MGM</title>
+<meta name="theme-color" content="#2c5ccc">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Budget MGM">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* Une colonne façon carnet de comptes : le "reste" en très gros en tête, puis un bloc coloré par catégorie. */
+  --bg:#edf0f5; --surface:#ffffff; --ink:#1a2131; --muted:#5f6b80; --line:#d5dce7;
+  --accent:#2c5ccc; --accent-soft:#e2eafb;
+  --sub:#d9702a; --sub-soft:#fcebdd;
+  --misc:#b8870f; --pink:#c2417f; --teal:#13817f; --violet:#6a4fcf;
+  --good:#13805a; --good-soft:#dcf2e8; --bad:#c7344c; --bad-soft:#fbe2e6; --warn-soft:#fbf1d3;
+  --font-display:"Bricolage Grotesque","Arial Rounded MT Bold",system-ui,sans-serif;
+  --font-body:"Figtree",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#0f131b; --surface:#171d28; --ink:#e7ebf2; --muted:#9aa5b8; --line:#2a3343;
+    --accent:#7ea3ff; --accent-soft:#1c2846;
+    --sub:#f29a58; --sub-soft:#3a2517;
+    --misc:#e6bb45; --pink:#f07ab2; --teal:#45c9c4; --violet:#a690ff;
+    --good:#4fcb97; --good-soft:#123128; --bad:#ff7c90; --bad-soft:#3b1a22; --warn-soft:#342b11;
+    color-scheme:dark;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.45 var(--font-body);-webkit-text-size-adjust:100%;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.wrap{max-width:560px;margin:0 auto;padding:16px 16px 56px;display:flex;flex-direction:column;gap:14px}
+h1,h2,h3{font-family:var(--font-display);text-wrap:balance;margin:0}
+.num{font-variant-numeric:tabular-nums}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.months{display:flex;align-items:center;gap:6px}
+.months h1{font-size:24px;font-weight:700;letter-spacing:-.01em}
+.eyebrow{margin:0;font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.icon-btn{width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:var(--surface);font-size:18px;line-height:1;display:grid;place-items:center;flex:none}
+.ghost{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:8px 14px;font-weight:600;font-size:14px}
+.hero{border-radius:22px;padding:20px 20px 18px;background:var(--good-soft);display:flex;flex-direction:column;gap:10px}
+.hero.neg{background:var(--bad-soft)}
+.hero-k{margin:0;font-weight:600;color:var(--muted);font-size:14px}
+.big{margin:0;font-family:var(--font-display);font-weight:800;font-size:clamp(46px,15vw,78px);line-height:.95;letter-spacing:-.035em;color:var(--good)}
+.hero.neg .big{color:var(--bad)}
+.hero-sub{margin:0;font-size:14px}
+.meter{height:10px;border-radius:999px;background:color-mix(in srgb,var(--ink) 10%,transparent);overflow:hidden}
+.meter span{display:block;height:100%;border-radius:999px;background:var(--good);transition:width .4s ease}
+.hero.neg .meter span,.meter span.over{background:var(--bad)}
+.pill{display:inline-block;font-size:12px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--surface);color:var(--muted);vertical-align:middle}
+.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.stat{background:var(--surface);border-radius:14px;padding:10px 12px;border-left:4px solid var(--c)}
+.stat p{margin:0}
+.stat .k{font-size:13px;color:var(--muted);font-weight:600}
+.stat .v{font-family:var(--font-display);font-weight:700;font-size:20px}
+.btn{border:0;border-radius:12px;padding:11px 16px;font-weight:700;background:var(--accent);color:#fff}
+@media (prefers-color-scheme: dark){.btn{color:#0f131b}}
+.btn.light{background:var(--surface);color:var(--ink);border:1px solid var(--line)}
+.btn.link{background:none;color:var(--accent);padding:11px 6px}
+.btn:disabled{opacity:.5;cursor:default}
+.actions{display:flex;flex-wrap:wrap;gap:8px}
+.sec{background:var(--surface);border-radius:18px;padding:14px 16px 12px;border-top:5px solid var(--c);display:flex;flex-direction:column}
+.sec-h{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:6px}
+.sec-h h2{font-size:18px;font-weight:700}
+.sec-h .tot{font-family:var(--font-display);font-weight:700;font-size:17px}
+.cols{display:flex;justify-content:flex-end;font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+.cols span{width:104px;text-align:right}
+.row{display:flex;align-items:center;gap:8px;padding:5px 0;min-height:44px}
+.lbl{flex:0 1 auto;min-width:0;overflow-wrap:anywhere}
+.lbl small{display:block;color:var(--muted);font-size:13px}
+.dots{flex:1 1 12px;min-width:12px;align-self:center;border-bottom:2px dotted var(--line);height:0;margin-top:6px}
+.fixed-amt{flex:none;font-weight:600}
+.cell{flex:none;width:104px;text-align:right;border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:8px 10px;font-variant-numeric:tabular-nums;font-weight:600}
+.cell::placeholder{color:var(--muted);font-weight:500;opacity:.8}
+.cell:focus{background:var(--surface);border-color:var(--accent);outline:none;box-shadow:0 0 0 3px var(--accent-soft)}
+.del{flex:none;width:32px;height:32px;border-radius:50%;border:0;background:transparent;color:var(--muted);font-size:20px;line-height:1}
+.del:hover{background:var(--bad-soft);color:var(--bad)}
+.empty{margin:4px 0 8px;color:var(--muted);font-size:14px}
+.add{display:flex;gap:8px;margin-top:8px;padding-top:10px;border-top:1px solid var(--line)}
+.add input{border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:9px 10px;min-width:0}
+.add .n{flex:1}
+.add .a{width:92px;text-align:right}
+.add .btn{padding:9px 14px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.chip{border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:5px 11px;font-size:13px;font-weight:600}
+.slip{margin-top:6px;font-size:13px;color:var(--muted);display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.slip button{border:0;background:none;color:var(--accent);font-weight:700;padding:6px 0}
+.note{font-size:13px;color:var(--muted);text-align:center;margin:6px 8px 0}
+.warn{background:var(--warn-soft);border-radius:12px;padding:10px 12px;font-size:14px;margin:0}
+.center{min-height:60vh;display:grid;place-items:center;text-align:center;color:var(--muted)}
+.lock{background:var(--surface);border-radius:22px;padding:28px 20px 22px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:12px;border:2px dashed var(--line)}
+.lock h2{font-size:24px;font-weight:800}
+.lock p{margin:0;max-width:40ch}
+.lock-ic{width:68px;height:68px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center}
+.big-btn{font-size:17px;padding:14px 22px;width:100%;max-width:320px}
+/* connexion */
+.auth{display:flex;flex-direction:column;gap:16px;padding-top:6vh}
+.auth h1{font-size:40px;font-weight:800;letter-spacing:-.03em;line-height:1}
+.auth h1 span{color:var(--accent)}
+.auth .lead{margin:0;color:var(--muted);max-width:36ch}
+.card{background:var(--surface);border-radius:18px;padding:16px;display:flex;flex-direction:column;gap:10px}
+.card p{margin:0}
+.field{display:flex;flex-direction:column;gap:4px}
+.field label{font-size:14px;font-weight:600}
+.field small{color:var(--muted);font-size:12px}
+.field input{border:1px solid var(--line);background:var(--bg);border-radius:12px;padding:12px;font-size:16px}
+.msg{min-height:1.2em;font-size:14px;color:var(--bad);margin:0}
+/* assistant de catégories */
+.wz{display:flex;flex-direction:column;gap:14px}
+.steps{display:flex;gap:6px}
+.steps span{flex:1;height:5px;border-radius:999px;background:var(--line)}
+.steps span.on{background:var(--accent)}
+.wz-intro h1{font-size:28px;font-weight:800;letter-spacing:-.02em}
+.wz-intro p{margin:6px 0 0;color:var(--muted)}
+.grp{background:var(--surface);border-radius:18px;padding:14px 16px;border-top:5px solid var(--c);display:flex;flex-direction:column;gap:10px}
+.grp h2{font-size:18px}
+.grp .hint{margin:0;font-size:13px;color:var(--muted)}
+.pick{display:flex;flex-wrap:wrap;gap:8px}
+.tog{border:1.5px solid var(--line);background:var(--bg);border-radius:999px;padding:8px 14px;font-weight:600;font-size:15px;display:inline-flex;align-items:center;gap:6px}
+.tog[aria-pressed="true"]{background:var(--c);border-color:var(--c);color:#fff}
+@media (prefers-color-scheme: dark){.tog[aria-pressed="true"]{color:#0f131b}}
+.tog .ck{font-size:13px;opacity:.9}
+.tog.req{cursor:default}
+.custom{display:flex;gap:8px}
+.custom input{flex:1;min-width:0;border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:8px 10px}
+.custom button{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 12px;font-weight:700}
+.ed-row{display:flex;gap:8px;align-items:center;min-height:44px}
+.ed-row label{flex:1;min-width:0}
+.ed-row input{width:110px;border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:9px 10px;text-align:right;font-variant-numeric:tabular-nums}
+.sticky{position:sticky;bottom:0;padding:10px 0 calc(6px + env(safe-area-inset-bottom));background:linear-gradient(to top,var(--bg) 70%,transparent);display:flex;gap:8px}
+.sticky .btn{flex:1;padding:14px}
+/* modale */
+.overlay{position:fixed;inset:0;background:rgba(10,14,22,.5);display:flex;align-items:flex-end;justify-content:center;z-index:20}
+.sheet{background:var(--bg);width:100%;max-width:560px;max-height:92%;overflow:auto;border-radius:22px 22px 0 0;padding:18px 16px calc(24px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:14px}
+@media (min-width:600px){.overlay{align-items:center}.sheet{border-radius:22px}}
+.sheet-h{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.sheet-h h2{font-size:21px}
+.found{display:flex;align-items:center;gap:10px}
+.found input{flex:1;font-family:var(--font-display);font-size:30px;font-weight:800;border:1px solid var(--line);background:var(--bg);border-radius:12px;padding:8px 12px;text-align:right;min-width:0}
+.meta{font-size:13px;color:var(--muted)}
+.spinner{width:34px;height:34px;border-radius:50%;border:4px solid var(--accent-soft);border-top-color:var(--accent);animation:spin .9s linear infinite;margin:6px auto}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion: reduce){.spinner{animation-duration:3s}.meter span{transition:none}}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;font-weight:600;z-index:30;max-width:calc(100% - 32px)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+</style>
+</head>
+<body>
+<main class="wrap" id="app" aria-live="polite">
+  <div class="center"><div><div class="spinner" aria-hidden="true"></div><p>Ouverture de ton budget…</p></div></div>
+</main>
+<input type="file" id="file" class="sr" accept="image/*,application/pdf" aria-label="Choisir le bulletin de salaire">
+<div id="modal"></div>
+<div id="toast" class="toast" hidden></div>
+
+<script>window.__APP_VER__="2026.11.19-1506";</script>
+<script>
+(() => {
+"use strict";
+const APP_VER = window.__APP_VER__ || 'dev';
+/* ---------- Supabase (même projet et mêmes comptes que l'appli de révision) ---------- */
+const SUPA_URL = 'https://aychipxyiebtmknwskmb.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF5Y2hpcHh5aWVidG1rbndza21iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQ5MTcxMTcsImV4cCI6MjExMDQ5MzExN30.DrSs5Rme7cNcltZ5StDnXoDT25g0mUgX-iF52t7R3D0';
+const EMAIL_DOMAIN = '@bts-ndrc.app';
+
+const app = document.getElementById('app');
+const modalEl = document.getElementById('modal');
+const fileEl = document.getElementById('file');
+const EUR = new Intl.NumberFormat('fr-FR', {style: 'currency', currency: 'EUR'});
+const fmt = n => EUR.format(Math.round((Number(n) || 0) * 100) / 100);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const rid = () => Math.random().toString(36).slice(2, 10);
+const clone = o => JSON.parse(JSON.stringify(o));
+const norm = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+function parseAmt(s){
+  if (s == null) return null;
+  s = String(s).replace(/[\s  €]/g, '').replace(',', '.');
+  if (s === '') return null;
+  const n = Number(s);
+  return isFinite(n) ? Math.round(n * 100) / 100 : NaN;
+}
+const amtVal = n => (n == null ? '' : String(n).replace('.', ','));
+function monthKey(d){ return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); }
+function shiftKey(k, delta){ const [y, m] = k.split('-').map(Number); return monthKey(new Date(y, m - 1 + delta, 1)); }
+function monthLabel(k, withYear = true){
+  const [y, m] = k.split('-').map(Number);
+  const s = new Date(y, m - 1, 1).toLocaleDateString('fr-FR', withYear ? {month: 'long', year: 'numeric'} : {month: 'long'});
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+const CUR = monthKey(new Date());
+const LS = {
+  get(k, d){ try { const v = localStorage.getItem('budget:' + k); return v == null ? d : JSON.parse(v); } catch(e){ return d; } },
+  set(k, v){ try { if (v == null) localStorage.removeItem('budget:' + k); else localStorage.setItem('budget:' + k, JSON.stringify(v)); } catch(e){} },
+};
+
+/* ---------- catalogue des catégories proposées ---------- */
+const GROUPS = {
+  entrees: {titre: 'Ce qui rentre', hint: 'Le salaire est obligatoire : c’est ton bulletin qui débloque chaque mois.', c: 'var(--accent)', items: [
+    ['salaire','Salaire'],['aides','Aides (CAF, APL)'],['bourse','Bourse'],['prime','Prime d’activité'],['pension','Pension'],['extra','Petits boulots']]},
+  fixes: {titre: 'Dépenses fixes', hint: 'Ce qui part tous les mois.', c: 'var(--ink)', items: [
+    ['logement','Loyer / maison'],['nourriture','Nourriture'],['essence','Essence'],['epargne','Épargne'],['assurance','Assurances'],['electricite','Électricité / gaz'],['box','Box internet'],['telephone','Forfait téléphone'],['transport','Transports'],['credit','Crédit'],['mutuelle','Mutuelle']]},
+  abos: {titre: 'Abonnements', hint: 'Streaming, jeux, sport…', c: 'var(--sub)', items: [
+    ['netflix','Netflix'],['spotify','Spotify'],['deezer','Deezer'],['disney','Disney+'],['paramount','Paramount+'],['primevideo','Amazon Prime'],['canal','Canal+'],['youtube','YouTube Premium'],['psplus','PS Plus'],['gamepass','Game Pass'],['icloud','iCloud+'],['sport','Salle de sport']]},
+  cats: {titre: 'Dépenses du mois', hint: 'Les catégories où tu notes tes dépenses au fil du mois.', c: 'var(--pink)', items: [
+    ['sorties','Sorties (resto, bar…)'],['courses','Courses'],['shopping','Shopping'],['tabac','Tabac / vape'],['beaute','Coiffeur / beauté'],['loisirs','Loisirs'],['cadeaux','Cadeaux'],['sante','Santé'],['divers','Divers']]},
+};
+const CAT_COLORS = ['var(--pink)','var(--misc)','var(--teal)','var(--violet)','var(--sub)'];
+const CAT_CHIPS = {
+  sorties: ['Restaurant','Bar','Fast-food','Cinéma','Soirée','Concert'],
+  courses: ['Supermarché','Boulangerie','Marché'],
+  shopping: ['Vêtements','Chaussures','High-tech'],
+  tabac: ['Tabac','Vape'],
+  beaute: ['Coiffeur','Barbier','Soins'],
+  loisirs: ['Jeux vidéo','Sport','Sortie'],
+  sante: ['Pharmacie','Médecin'],
+};
+
+/* ---------- état ---------- */
+const S = {
+  user: null, view: 'loading',
+  cfg: null, cfgLoaded: false,
+  monKey: CUR, mon: null, monLoaded: false,
+  err: null, offline: false, needRender: false,
+};
+
+/* ---------- API ---------- */
+async function api(path, opts = {}, token){
+  const res = await fetch(SUPA_URL + path, {...opts, headers: {'apikey': SUPA_KEY, 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (token || SUPA_KEY), ...(opts.headers || {})}});
+  const txt = await res.text(); let data = null; try { data = txt ? JSON.parse(txt) : null; } catch(e){}
+  if (!res.ok){
+    const err = new Error((data && (data.msg || data.message || data.error_description || data.error)) || ('Erreur ' + res.status));
+    err.status = res.status; err.code = data && data.code; throw err;
+  }
+  return data;
+}
+async function session(){
+  const u = LS.get('user', null); if (!u) return null;
+  if (u.exp && Date.now() < u.exp - 60000) return u;
+  try {
+    const d = await api('/auth/v1/token?grant_type=refresh_token', {method: 'POST', body: JSON.stringify({refresh_token: u.refresh})});
+    const nu = {...u, token: d.access_token, refresh: d.refresh_token, exp: Date.now() + d.expires_in * 1000};
+    LS.set('user', nu); S.user = nu; return nu;
+  } catch(e){
+    if (e.status === 400 || e.status === 401){ logout(); return null; }
+    throw e;
+  }
+}
+function friendly(msg){
+  const m = norm(msg);
+  if (m.includes('already') || m.includes('duplicate') || m.includes('registered')) return 'Ce pseudo est déjà pris. Choisis-en un autre.';
+  if (m.includes('invalid login') || m.includes('invalid credentials')) return 'Pseudo ou mot de passe incorrect.';
+  if (m.includes('password')) return 'Le mot de passe doit faire au moins 6 caractères.';
+  if (m.includes('failed to fetch') || m.includes('network') || m.includes('load failed')) return 'Pas de connexion internet.';
+  return msg;
+}
+function isMissingTable(e){ const m = norm(e && e.message); return e && (e.code === 'PGRST205' || e.code === '42P01' || m.includes('budget_docs')); }
+
+const Docs = {
+  cacheKey(key){ return 'doc:' + S.user.id + ':' + key; },
+  pendingKey(key){ return 'pending:' + S.user.id + ':' + key; },
+  touched: {}, writers: {},
+  cached(key){ return LS.get(this.cacheKey(key), null); },
+  async fetch(key){
+    const u = await session(); if (!u) throw new Error('session');
+    const rows = await api('/rest/v1/budget_docs?select=data&key=eq.' + encodeURIComponent(key), {}, u.token);
+    return rows && rows[0] ? rows[0].data : null;
+  },
+  save(key, obj){
+    LS.set(this.cacheKey(key), obj);
+    LS.set(this.pendingKey(key), true);
+    this.touched[key] = Date.now();
+    const w = this.writers[key] || (this.writers[key] = {busy: false, next: null});
+    w.next = clone(obj);
+    if (!w.busy) this.flush(key);
+  },
+  async flush(key){
+    const w = this.writers[key] || (this.writers[key] = {busy: false, next: null});
+    if (w.busy) return;
+    if (!w.next){ if (!LS.get(this.pendingKey(key), false)) return; w.next = this.cached(key); if (!w.next) return; }
+    w.busy = true;
+    try {
+      while (w.next){
+        const data = w.next; w.next = null;
+        const u = await session(); if (!u) throw new Error('session');
+        await api('/rest/v1/budget_docs?on_conflict=user_id,key', {method: 'POST', headers: {'Prefer': 'resolution=merge-duplicates,return=minimal'},
+          body: JSON.stringify({user_id: u.id, key, data, updated_at: new Date().toISOString()})}, u.token);
+      }
+      LS.set(this.pendingKey(key), null);
+      if (S.offline){ S.offline = false; render(); }
+    } catch(e){
+      if (isMissingTable(e)){ S.err = 'setup'; render(); }
+      else if (!S.offline){ S.offline = true; toast('Hors ligne : enregistré sur ton téléphone, envoi dès que possible.'); render(); }
+    } finally { w.busy = false; }
+  },
+  flushAll(){
+    if (!S.user) return;
+    for (let i = 0; i < localStorage.length; i++){
+      const k = localStorage.key(i) || '';
+      const pre = 'budget:pending:' + S.user.id + ':';
+      if (k.startsWith(pre)) this.flush(k.slice(pre.length));
+    }
+  },
+};
+window.addEventListener('online', () => Docs.flushAll());
+document.addEventListener('visibilitychange', () => { if (!document.hidden && S.user){ Docs.flushAll(); } });
+
+async function loadDoc(key, apply){
+  const started = Date.now();
+  const c = Docs.cached(key);
+  if (c) apply(c, false);
+  try {
+    const d = await Docs.fetch(key);
+    if ((Docs.touched[key] || 0) > started) return;
+    if (LS.get(Docs.pendingKey(key), false)) { Docs.flush(key); return; }
+    if (d) LS.set(Docs.cacheKey(key), d);
+    apply(d, true);
+  } catch(e){
+    if (e.message === 'session') return;
+    if (isMissingTable(e)){ S.err = 'setup'; render(); return; }
+    S.offline = true;
+    if (!c) apply(null, 'error');
+    render();
+  }
+}
+function loadCfg(){
+  S.cfgLoaded = false;
+  loadDoc('config', (d, ok) => {
+    if (ok === 'error'){ S.err = 'load'; render(); return; }
+    S.cfg = d ? upgradeCfg(d) : null; S.cfgLoaded = true;
+    if (!S.cfg && S.view !== 'wizard') startWizard(null);
+    render();
+  });
+}
+function loadMon(){
+  const key = S.monKey;
+  S.mon = null; S.monLoaded = false;
+  loadDoc('m-' + key, (d, ok) => {
+    if (key !== S.monKey) return;
+    if (ok === 'error'){ S.monLoaded = true; S.mon = null; }
+    else { S.mon = d; S.monLoaded = true; }
+    render();
+  });
+}
+function upgradeCfg(c){
+  c.entrees = c.entrees || []; c.fixes = c.fixes || []; c.abos = c.abos || []; c.cats = c.cats || [];
+  if (!c.entrees.find(e => e.id === 'salaire')) c.entrees.unshift({id: 'salaire', nom: 'Salaire', prevu: 0});
+  return c;
+}
+
+/* ---------- connexion ---------- */
+function slug(p){ return norm(p).replace(/[^a-z0-9_.-]/g, ''); }
+function renderAuth(){
+  app.innerHTML = `
+    <section class="auth">
+      <div><p class="eyebrow">Budget by MGM</p><h1>Ton budget,<br><span>dans ta poche.</span></h1></div>
+      <p class="lead">Connecte-toi pour retrouver ton budget sur tous tes appareils. Tu peux utiliser le même compte que l’appli de révision.</p>
+      <form class="card" id="auth-form" autocomplete="on">
+        <div class="field"><label for="ps">Pseudo</label><input id="ps" maxlength="20" autocomplete="username" autocapitalize="none" spellcheck="false"><small>3 à 20 caractères : lettres, chiffres, _ . -</small></div>
+        <div class="field"><label for="pw">Mot de passe</label><input id="pw" type="password" autocomplete="current-password"><small>6 caractères minimum</small></div>
+        <p class="msg" id="msg" role="status"></p>
+        <div class="actions"><button class="btn" type="submit" id="signin" style="flex:1">Me connecter</button><button class="btn light" type="button" id="signup" style="flex:1">Créer mon compte</button></div>
+      </form>
+      <p class="note">Ton budget est privé : personne d’autre ne peut le voir.</p>
+    </section>`;
+  const $ = id => document.getElementById(id);
+  const msg = t => { $('msg').textContent = t; };
+  const read = () => {
+    const p = $('ps').value.trim(), pw = $('pw').value, s = slug(p);
+    if (s.length < 3 || s.length > 20 || s !== p.toLowerCase()){ msg('Pseudo invalide : 3 à 20 caractères, lettres sans accent, chiffres, _ . -'); return null; }
+    if (pw.length < 6){ msg('Le mot de passe doit faire au moins 6 caractères.'); return null; }
+    return {p, s, pw, email: s + EMAIL_DOMAIN};
+  };
+  const busy = b => { $('signin').disabled = b; $('signup').disabled = b; };
+  const done = (d, pseudo) => {
+    const u = {pseudo, id: d.user.id, token: d.access_token, refresh: d.refresh_token, exp: Date.now() + d.expires_in * 1000};
+    LS.set('user', u); S.user = u; afterLogin();
+  };
+  $('auth-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const f = read(); if (!f) return; msg(''); busy(true);
+    try {
+      const d = await api('/auth/v1/token?grant_type=password', {method: 'POST', body: JSON.stringify({email: f.email, password: f.pw})});
+      let pseudo = f.p;
+      try { const rows = await api('/rest/v1/profiles?select=pseudo&id=eq.' + d.user.id, {}, d.access_token); if (rows && rows[0]) pseudo = rows[0].pseudo; } catch(e){}
+      done(d, pseudo);
+    } catch(err){ msg(friendly(err.message)); busy(false); }
+  });
+  $('signup').addEventListener('click', async () => {
+    const f = read(); if (!f) return; msg('Création du compte…'); busy(true);
+    try {
+      const d = await api('/auth/v1/signup', {method: 'POST', body: JSON.stringify({email: f.email, password: f.pw})});
+      if (!d.access_token) throw new Error('Compte créé, mais la confirmation par e-mail est activée dans Supabase.');
+      try { await api('/rest/v1/profiles', {method: 'POST', headers: {'Prefer': 'return=minimal'}, body: JSON.stringify({id: d.user.id, pseudo: f.p})}, d.access_token); } catch(e){}
+      done(d, f.p);
+    } catch(err){ msg(friendly(err.message)); busy(false); }
+  });
+}
+function afterLogin(){ S.view = 'main'; S.err = null; S.monKey = CUR; loadCfg(); loadMon(); Docs.flushAll(); render(); }
+function logout(){ LS.set('user', null); S.user = null; S.cfg = null; S.mon = null; S.view = 'auth'; closeModal(); render(); }
+
+/* ---------- calculs ---------- */
+function mon(){ const m = S.mon || {}; return {entrees: {}, fixesReel: {}, depenses: [], ...m}; }
+function salaireReel(m){ return (m.entrees || {}).salaire ?? null; }
+function totals(){
+  const c = S.cfg, m = mon();
+  let estime = false;
+  const entrees = c.entrees.reduce((s, e) => { const r = m.entrees[e.id]; if (r == null) estime = true; return s + (r ?? e.prevu ?? 0); }, 0);
+  const fixes = c.fixes.reduce((s, f) => s + (m.fixesReel[f.id] ?? f.prevu ?? 0), 0);
+  const abos = c.abos.reduce((s, a) => s + (a.montant || 0), 0);
+  const catIds = new Set(c.cats.map(k => k.id));
+  const depenses = (m.depenses || []).filter(d => catIds.has(d.cat)).reduce((s, d) => s + (d.montant || 0), 0);
+  const dispo = entrees - fixes - abos;
+  return {entrees, estime, fixes, abos, depenses, dispo, reste: dispo - depenses};
+}
+
+/* ---------- rendu ---------- */
+function inputFocused(){ const a = document.activeElement; return a && a.tagName === 'INPUT' && app.contains(a) && a.id !== 'ps' && a.id !== 'pw'; }
+function render(){
+  if (S.view === 'auth'){ renderAuth(); return; }
+  if (S.view === 'wizard'){ return; }
+  if (inputFocused()){ S.needRender = true; renderHero(); return; }
+  S.needRender = false;
+  if (S.err === 'setup'){
+    app.innerHTML = `<div class="center"><div class="card" style="text-align:left"><h2>Encore une étape</h2><p>La base de données du budget n’est pas encore créée dans Supabase. Lance le script <b>SETUP-SUPABASE.sql</b> dans l’éditeur SQL de Supabase, puis recharge la page.</p><button class="btn" data-act="reload">Recharger</button></div></div>`;
+    return;
+  }
+  if (!S.cfgLoaded){
+    app.innerHTML = S.err === 'load'
+      ? `<div class="center"><div class="card"><p>Impossible de charger ton budget. Vérifie ta connexion internet.</p><button class="btn" data-act="retry">Réessayer</button></div></div>`
+      : `<div class="center"><div><div class="spinner" aria-hidden="true"></div><p>Ouverture de ton budget…</p></div></div>`;
+    return;
+  }
+  if (!S.cfg){ return; }
+  renderMain();
+}
+app.addEventListener('focusout', () => setTimeout(() => { if (S.needRender) render(); }, 0));
+
+function renderHero(){
+  const el = document.getElementById('hero');
+  if (!el || !S.cfg) return;
+  const t = totals(), neg = t.reste < 0;
+  const pct = t.dispo > 0 ? Math.min(100, Math.round(t.depenses / t.dispo * 100)) : (t.depenses > 0 ? 100 : 0);
+  el.className = 'hero' + (neg ? ' neg' : '');
+  el.innerHTML = `
+    <p class="hero-k">Reste en ${esc(monthLabel(S.monKey, false).toLowerCase())} ${t.estime ? '<span class="pill">estimé</span>' : ''}</p>
+    <p class="big num">${fmt(t.reste)}</p>
+    <div class="meter" role="img" aria-label="${pct}% de l’argent disponible déjà dépensé"><span class="${t.depenses > t.dispo ? 'over' : ''}" style="width:${pct}%"></span></div>
+    <p class="hero-sub">Après les fixes et abonnements il te restait <strong class="num">${fmt(t.dispo)}</strong>. Tu as déjà dépensé <strong class="num">${fmt(t.depenses)}</strong>.</p>`;
+}
+
+function header(){
+  const isCur = S.monKey === CUR;
+  return `
+    <header class="top">
+      <div>
+        <p class="eyebrow">Budget by MGM</p>
+        <div class="months">
+          <button class="icon-btn" data-act="prev" aria-label="Mois précédent">‹</button>
+          <h1>${esc(monthLabel(S.monKey))}</h1>
+          <button class="icon-btn" data-act="next" aria-label="Mois suivant">›</button>
+        </div>
+      </div>
+      <button class="ghost" data-act="menu">Réglages</button>
+    </header>
+    ${!isCur ? `<button class="btn light" data-act="today">Revenir à ${esc(monthLabel(CUR, false).toLowerCase())}</button>` : ''}
+    ${S.offline ? `<p class="warn">Hors ligne : tes changements sont gardés sur ton téléphone et seront envoyés dès que tu auras du réseau.</p>` : ''}`;
+}
+
+function renderMain(){
+  const c = S.cfg, m = mon();
+  if (!S.monLoaded){
+    app.innerHTML = header() + `<div class="center"><div><div class="spinner" aria-hidden="true"></div><p>Chargement du mois…</p></div></div>`;
+    return;
+  }
+  if (salaireReel(m) == null){
+    const mois = monthLabel(S.monKey, false).toLowerCase();
+    app.innerHTML = header() + `
+      <section class="lock" aria-labelledby="h-lock">
+        <div class="lock-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></div>
+        <h2 id="h-lock">Budget de ${esc(mois)} verrouillé</h2>
+        <p>Dépose ton bulletin de salaire pour débloquer ce mois. L’appli lit le net versé et prépare ton budget à partir de là.</p>
+        <button class="btn big-btn" data-act="slip">Déposer mon bulletin</button>
+        <p class="meta">PDF ou photo. Le bulletin reste sur ton téléphone : seul le montant est enregistré.</p>
+        <button class="btn link" data-act="slip-manual">La lecture ne marche pas ? Saisir le salaire à la main</button>
+      </section>`;
+    return;
+  }
+  const t = totals();
+  const deps = m.depenses || [];
+  const slipInfo = m.bulletin ? `Salaire lu sur ton bulletin${m.bulletin.periode ? ' de ' + esc(monthLabel(m.bulletin.periode).toLowerCase()) : ''}.` : 'Salaire saisi à la main.';
+  const catSections = c.cats.map((k, i) => {
+    const list = deps.filter(d => d.cat === k.id);
+    const tot = list.reduce((s, d) => s + (d.montant || 0), 0);
+    const chips = (CAT_CHIPS[k.id] || []);
+    return `
+    <section class="sec" style="--c:${CAT_COLORS[i % CAT_COLORS.length]}" aria-labelledby="h-c-${esc(k.id)}">
+      <div class="sec-h"><h2 id="h-c-${esc(k.id)}">${esc(k.nom)}</h2><span class="tot num">${fmt(tot)}</span></div>
+      ${list.length ? list.map(d => `
+        <div class="row"><span class="lbl">${esc(d.nom)}</span><span class="dots"></span><span class="fixed-amt num">${fmt(d.montant)}</span>
+        <button class="del" data-act="del-dep" data-id="${esc(d.id)}" aria-label="Supprimer ${esc(d.nom)}">×</button></div>`).join('')
+        : `<p class="empty">Rien pour l’instant.</p>`}
+      <form class="add" data-cat="${esc(k.id)}" autocomplete="off">
+        <input class="n" id="dn-${esc(k.id)}" placeholder="Quoi ?" aria-label="Nom de la dépense (${esc(k.nom)})" maxlength="60">
+        <input class="a" id="da-${esc(k.id)}" placeholder="0,00 €" inputmode="decimal" aria-label="Montant (${esc(k.nom)})">
+        <button class="btn" type="submit">Ajouter</button>
+      </form>
+      ${chips.length ? `<div class="chips">${chips.map(s => `<button class="chip" type="button" data-act="chip" data-cat="${esc(k.id)}" data-v="${esc(s)}">${esc(s)}</button>`).join('')}</div>` : ''}
+    </section>`;
+  }).join('');
+
+  app.innerHTML = header() + `
+    <section id="hero" class="hero"></section>
+    <div class="stats">
+      <div class="stat" style="--c:var(--accent)"><p class="k">Entrées</p><p class="v num">${fmt(t.entrees)}</p></div>
+      <div class="stat" style="--c:var(--ink)"><p class="k">Fixes</p><p class="v num">${fmt(t.fixes)}</p></div>
+      <div class="stat" style="--c:var(--sub)"><p class="k">Abonnements</p><p class="v num">${fmt(t.abos)}</p></div>
+      <div class="stat" style="--c:var(--pink)"><p class="k">Dépensé ce mois</p><p class="v num">${fmt(t.depenses)}</p></div>
+    </div>
+    <section class="sec" style="--c:var(--accent)" aria-labelledby="h-in">
+      <div class="sec-h"><h2 id="h-in">Entrées</h2><span class="tot num">${fmt(t.entrees)}</span></div>
+      <div class="cols" aria-hidden="true"><span>Réel</span></div>
+      ${c.entrees.map(e => `
+      <div class="row">
+        <span class="lbl">${esc(e.nom)}<small>prévu ${fmt(e.prevu)}</small></span><span class="dots"></span>
+        <input class="cell" id="in-${esc(e.id)}" inputmode="decimal" autocomplete="off" data-field="entree" data-id="${esc(e.id)}" value="${esc(amtVal(m.entrees[e.id]))}" placeholder="${esc(amtVal(e.prevu ?? 0))}" aria-label="${esc(e.nom)} réel">
+      </div>`).join('')}
+      <div class="slip"><span>${slipInfo}</span><button data-act="slip">Relire un bulletin</button></div>
+    </section>
+    ${c.fixes.length ? `
+    <section class="sec" style="--c:var(--ink)" aria-labelledby="h-fx">
+      <div class="sec-h"><h2 id="h-fx">Dépenses fixes</h2><span class="tot num">${fmt(t.fixes)}</span></div>
+      <div class="cols" aria-hidden="true"><span>Réel</span></div>
+      ${c.fixes.map(f => `
+      <div class="row">
+        <span class="lbl">${esc(f.nom)}<small>prévu ${fmt(f.prevu)}</small></span><span class="dots"></span>
+        <input class="cell" id="fx-${esc(f.id)}" inputmode="decimal" autocomplete="off" data-field="fixe" data-id="${esc(f.id)}" value="${esc(amtVal(m.fixesReel[f.id]))}" placeholder="${esc(amtVal(f.prevu ?? 0))}" aria-label="${esc(f.nom)} réel">
+      </div>`).join('')}
+    </section>` : ''}
+    ${c.abos.length ? `
+    <section class="sec" style="--c:var(--sub)" aria-labelledby="h-ab">
+      <div class="sec-h"><h2 id="h-ab">Abonnements</h2><span class="tot num">${fmt(t.abos)}</span></div>
+      ${c.abos.map(a => `<div class="row"><span class="lbl">${esc(a.nom)}</span><span class="dots"></span><span class="fixed-amt num">${fmt(a.montant)}</span></div>`).join('')}
+    </section>` : ''}
+    ${catSections}
+    <p class="note">Connecté en tant que <b>${esc(S.user.pseudo)}</b>. Ton budget est privé.</p>`;
+  renderHero();
+}
+
+/* ---------- assistant : choix des catégories puis montants ---------- */
+let W = null;
+function startWizard(cfg){
+  W = {step: 1, sel: {}, custom: {}, amounts: {}, editing: !!cfg};
+  for (const g of Object.keys(GROUPS)){
+    const known = new Set(GROUPS[g].items.map(i => i[0]));
+    if (cfg){
+      W.sel[g] = new Set(cfg[g].map(x => x.id));
+      W.custom[g] = cfg[g].filter(x => !known.has(x.id)).map(x => [x.id, x.nom]);
+      cfg[g].forEach(x => { if (g === 'abos') W.amounts[x.id] = x.montant; else if (g !== 'cats') W.amounts[x.id] = x.prevu; });
+    } else {
+      W.sel[g] = new Set({entrees: ['salaire'], fixes: [], abos: [], cats: ['sorties']}[g]);
+      W.custom[g] = [];
+    }
+  }
+  W.sel.entrees.add('salaire');
+  S.view = 'wizard';
+  drawWizard();
+  window.scrollTo(0, 0);
+}
+function groupItems(g){ return [...GROUPS[g].items, ...W.custom[g]]; }
+function drawWizard(){
+  const stepBar = `<div class="steps" aria-label="Étape ${W.step} sur 2"><span class="on"></span><span class="${W.step === 2 ? 'on' : ''}"></span></div>`;
+  if (W.step === 1){
+    app.innerHTML = `
+      <div class="wz">
+        ${stepBar}
+        <div class="wz-intro"><p class="eyebrow">Étape 1 sur 2</p><h1>${W.editing ? 'Tes catégories' : 'Choisis tes catégories'}</h1>
+        <p>Touche ce qui te concerne. Tu pourras changer ça quand tu veux dans Réglages.</p></div>
+        ${Object.keys(GROUPS).map(g => `
+          <section class="grp" style="--c:${GROUPS[g].c}" aria-labelledby="g-${g}">
+            <h2 id="g-${g}">${GROUPS[g].titre}</h2>
+            <p class="hint">${GROUPS[g].hint}</p>
+            <div class="pick">
+              ${groupItems(g).map(([id, nom]) => {
+                const on = W.sel[g].has(id), req = g === 'entrees' && id === 'salaire';
+                return `<button class="tog${req ? ' req' : ''}" type="button" data-act="tog" data-g="${g}" data-id="${esc(id)}" aria-pressed="${on}">${on ? '<span class="ck" aria-hidden="true">✓</span>' : ''}${esc(nom)}</button>`;
+              }).join('')}
+            </div>
+            <form class="custom" data-g="${g}"><input id="cu-${g}" placeholder="Autre (ex. ${g === 'abos' ? 'Crunchyroll' : g === 'cats' ? 'Animaux' : g === 'fixes' ? 'Pension alimentaire' : 'Allocation'})" maxlength="30" aria-label="Ajouter une catégorie à ${GROUPS[g].titre}"><button type="submit">Ajouter</button></form>
+          </section>`).join('')}
+        <div class="sticky">${W.editing ? '<button class="btn light" data-act="wz-cancel">Annuler</button>' : ''}<button class="btn" data-act="wz-next">Suivant : les montants</button></div>
+      </div>`;
+    return;
+  }
+  const amountRows = g => groupItems(g).filter(([id]) => W.sel[g].has(id)).map(([id, nom]) => `
+    <div class="ed-row"><label for="am-${esc(id)}">${esc(nom)}</label><input id="am-${esc(id)}" data-amt="${esc(id)}" inputmode="decimal" placeholder="0,00 €" value="${esc(amtVal(W.amounts[id]))}"></div>`).join('');
+  const blocks = ['entrees', 'fixes', 'abos'].filter(g => W.sel[g].size).map(g => `
+    <section class="grp" style="--c:${GROUPS[g].c}"><h2>${GROUPS[g].titre}</h2><p class="hint">${g === 'entrees' ? 'Ce que tu touches d’habitude. Le réel viendra du bulletin.' : g === 'fixes' ? 'Ce que tu prévois de payer chaque mois.' : 'Le prix par mois.'}</p>${amountRows(g)}</section>`).join('');
+  app.innerHTML = `
+    <div class="wz">
+      ${stepBar}
+      <div class="wz-intro"><p class="eyebrow">Étape 2 sur 2</p><h1>Tes montants habituels</h1>
+      <p>Une estimation suffit. Chaque mois, tu pourras noter le réel.</p></div>
+      ${blocks}
+      ${W.sel.cats.size ? `<p class="note">Tes catégories du mois (${groupItems('cats').filter(([id]) => W.sel.cats.has(id)).map(([, n]) => esc(n)).join(', ')}) se remplissent au fil du mois, pas besoin de montant ici.</p>` : ''}
+      <p class="msg" id="wz-msg" role="status"></p>
+      <div class="sticky"><button class="btn light" data-act="wz-back">Retour</button><button class="btn" data-act="wz-save">${W.editing ? 'Enregistrer' : 'Créer mon budget'}</button></div>
+    </div>`;
+}
+function wizardCfg(){
+  const out = {};
+  for (const g of Object.keys(GROUPS)){
+    out[g] = groupItems(g).filter(([id]) => W.sel[g].has(id)).map(([id, nom]) => {
+      const a = W.amounts[id] ?? 0;
+      if (g === 'cats') return {id, nom: nom.replace(/\s*\(.*\)$/, '')};
+      if (g === 'abos') return {id, nom, montant: a};
+      return {id, nom: nom.replace(/\s*\(.*\)$/, ''), prevu: a};
+    });
+  }
+  return upgradeCfg(out);
+}
+app.addEventListener('input', e => {
+  const el = e.target;
+  if (W && S.view === 'wizard' && el.dataset.amt){ W.amounts[el.dataset.amt] = parseAmt(el.value); }
+});
+
+/* ---------- modales ---------- */
+function openModal(html){ modalEl.innerHTML = `<div class="overlay" data-act="modal-bg"><div class="sheet" role="dialog" aria-modal="true">${html}</div></div>`; const f = modalEl.querySelector('input,button.btn'); if (f) setTimeout(() => f.focus(), 30); }
+function closeModal(){ modalEl.innerHTML = ''; if (pendingReload) setTimeout(checkUpdate, 300); }
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && modalEl.innerHTML) closeModal(); });
+function openMenu(){
+  openModal(`
+    <div class="sheet-h"><h2>Réglages</h2><button class="icon-btn" data-act="close" aria-label="Fermer">×</button></div>
+    <div class="card">
+      <button class="btn" data-act="edit-cats">Modifier mes catégories et montants</button>
+      <button class="btn light" data-act="install">Mettre l’appli sur l’écran d’accueil</button>
+    </div>
+    <div class="card"><p>Connecté en tant que <b>${esc(S.user.pseudo)}</b></p><button class="btn light" data-act="logout">Se déconnecter</button></div>`);
+}
+
+/* ---------- lecture du bulletin (dans le téléphone, sans envoi) ---------- */
+function loadScript(src){ return new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(new Error('script')); document.head.appendChild(s); }); }
+let pdfjsP = null, tessP = null;
+let pendingReload = null;
+function getPdfjs(){
+  if (!pdfjsP){
+    const base = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
+    pdfjsP = (async () => {
+      await loadScript(base + 'pdf.worker.min.js');
+      await loadScript(base + 'pdf.min.js');
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc = base + 'pdf.worker.min.js';
+      return window.pdfjsLib;
+    })();
+    pdfjsP.catch(() => { pdfjsP = null; });
+  }
+  return pdfjsP;
+}
+function getTesseract(){
+  if (!tessP){ tessP = loadScript('https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js').then(() => window.Tesseract); tessP.catch(() => { tessP = null; }); }
+  return tessP;
+}
+async function ocr(canvas, onProg){
+  const T = await getTesseract();
+  const worker = await T.createWorker('fra', 1, {logger: m => { if (m.status === 'recognizing text' && onProg) onProg(Math.round(m.progress * 100)); }});
+  try { const r = await worker.recognize(canvas); return r.data.text || ''; }
+  finally { worker.terminate(); }
+}
+async function imageCanvas(file){
+  let img;
+  try { img = await createImageBitmap(file, {imageOrientation: 'from-image'}); }
+  catch(e){ img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = URL.createObjectURL(file); }); }
+  const k = Math.min(1, 2200 / Math.max(img.width, img.height));
+  const c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+  const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height); ctx.drawImage(img, 0, 0, c.width, c.height);
+  return c;
+}
+async function pdfText(file, onStatus){
+  const lib = await getPdfjs();
+  const pdf = await lib.getDocument({data: await file.arrayBuffer(), isEvalSupported: false}).promise;
+  let text = '';
+  for (let p = 1; p <= Math.min(pdf.numPages, 2); p++){
+    const page = await pdf.getPage(p);
+    const tc = await page.getTextContent();
+    const rows = [];
+    tc.items.forEach(it => {
+      if (!it.str || !it.str.trim()) return;
+      const y = it.transform[5], x = it.transform[4];
+      let r = rows.find(r => Math.abs(r.y - y) < 3);
+      if (!r){ r = {y, parts: []}; rows.push(r); }
+      r.parts.push({x, s: it.str});
+    });
+    rows.sort((a, b) => b.y - a.y);
+    text += rows.map(r => r.parts.sort((a, b) => a.x - b.x).map(p => p.s).join(' ')).join('\n') + '\n';
+  }
+  if (text.replace(/\s/g, '').length > 80) return text;
+  // PDF scanné : on lit l'image de la 1re page
+  onStatus && onStatus('Lecture de l’image du PDF…');
+  const page = await pdf.getPage(1);
+  const v1 = page.getViewport({scale: 1});
+  const vp = page.getViewport({scale: Math.min(3, 2200 / Math.max(v1.width, v1.height))});
+  const c = document.createElement('canvas'); c.width = Math.floor(vp.width); c.height = Math.floor(vp.height);
+  const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height);
+  await page.render({canvasContext: ctx, viewport: vp}).promise;
+  return ocr(c);
+}
+const MOIS = ['janvier','fevrier','mars','avril','mai','juin','juillet','aout','septembre','octobre','novembre','decembre'];
+function parseSlip(text){
+  const lines = text.split(/\n/).map(l => l.replace(/\s+/g, ' ').trim()).filter(Boolean);
+  const AMT = /(\d{1,3}(?:[ .  ]\d{3})+|\d+)[,.](\d{2})(?!\d)/g;
+  const amounts = l => [...l.matchAll(AMT)].map(m => parseFloat(m[1].replace(/[ .  ]/g, '') + '.' + m[2]));
+  let best = null;
+  lines.forEach((l, i) => {
+    const t = norm(l);
+    if (!/\bnet\b/.test(t)) return;
+    if (/imposable|social|fiscal|cumul|horaire|taux|brut/.test(t)) return;
+    let score = 0;
+    if (/net (a )?pay|net paye|net verse/.test(t)) score = 3;
+    if (/net a payer/.test(t)) score = 4;
+    if (/avant (impot|prelevement)/.test(t)) score = 2;
+    if (/apres (impot|prelevement|pas)|net paye|net verse|au salarie/.test(t)) score = 5;
+    if (!score) return;
+    let a = amounts(l).filter(v => v > 0 && v < 100000);
+    if (!a.length && lines[i + 1]) a = amounts(lines[i + 1]).filter(v => v > 0 && v < 100000);
+    if (!a.length) return;
+    const v = a[a.length - 1];
+    if (!best || score > best.score || (score === best.score && i > best.i)) best = {score, v, line: l, i};
+  });
+  const tt = norm(text);
+  let periode = null;
+  let m = tt.match(/du\s*\d{1,2}[\/.]\d{2}[\/.]\d{4}\s*au\s*\d{1,2}[\/.](\d{2})[\/.](\d{4})/);
+  if (m) periode = m[2] + '-' + m[1];
+  else { m = tt.match(new RegExp('(' + MOIS.join('|') + ')\\s+(20\\d{2})')); if (m) periode = m[2] + '-' + String(MOIS.indexOf(m[1]) + 1).padStart(2, '0'); }
+  return {net: best ? best.v : null, ligne: best ? best.line.slice(0, 90) : null, periode};
+}
+function slipConfirm(res, msg){
+  const net = res && typeof res.net === 'number' ? res.net : null;
+  const meta = [];
+  if (res && res.ligne) meta.push('Ligne lue : « ' + esc(res.ligne) + ' »');
+  if (res && res.periode) meta.push('Période : ' + esc(monthLabel(res.periode).toLowerCase()));
+  openModal(`
+    <div class="sheet-h"><h2>${net != null ? 'Salaire trouvé' : 'Ton salaire du mois'}</h2><button class="icon-btn" data-act="close" aria-label="Fermer">×</button></div>
+    <div class="card">
+      ${msg ? `<p class="warn">${esc(msg)}</p>` : ''}
+      <p>${net != null ? 'Vérifie le net versé, corrige-le si besoin :' : 'Indique le net versé sur ton compte :'}</p>
+      <div class="found"><input id="slip-amt" inputmode="decimal" value="${esc(amtVal(net))}" placeholder="0,00" aria-label="Salaire net versé"><strong>€</strong></div>
+      ${meta.length ? `<p class="meta">${meta.join(' · ')}</p>` : ''}
+    </div>
+    <p class="msg" id="slip-err" role="status"></p>
+    <div class="actions"><button class="btn" data-act="slip-ok" data-periode="${esc(res && res.periode || '')}" data-read="${net != null ? '1' : ''}" style="flex:1">Valider pour ${esc(monthLabel(S.monKey, false).toLowerCase())}</button><button class="btn light" data-act="close">Annuler</button></div>`);
+}
+async function readSlip(file){
+  const setStatus = t => { const el = document.getElementById('slip-status'); if (el) el.textContent = t; };
+  openModal(`<div class="card" style="text-align:center"><div class="spinner" aria-hidden="true"></div><p><strong>Lecture du bulletin…</strong></p><p class="meta" id="slip-status">Quelques secondes.</p></div>`);
+  try {
+    const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
+    let text;
+    if (isPdf) text = await pdfText(file, setStatus);
+    else { setStatus('Lecture de la photo… (la première fois peut prendre 20 secondes)'); text = await ocr(await imageCanvas(file), p => setStatus('Lecture de la photo… ' + p + ' %')); }
+    const res = parseSlip(text);
+    if (res.net == null) slipConfirm(res, 'Je n’ai pas trouvé la ligne « Net à payer ». Si c’est une photo, prends-la bien à plat et nette, ou saisis le montant.');
+    else slipConfirm(res, '');
+  } catch(e){
+    slipConfirm(null, 'La lecture n’a pas marché (vérifie ta connexion la première fois). Tu peux saisir le montant.');
+  }
+}
+fileEl.addEventListener('change', () => { const f = fileEl.files && fileEl.files[0]; fileEl.value = ''; if (f) readSlip(f); });
+
+/* ---------- actions ---------- */
+function saveMon(m){ S.mon = m; S.monLoaded = true; Docs.save('m-' + S.monKey, m); render(); }
+function goMonth(k){ S.monKey = k; loadMon(); render(); window.scrollTo(0, 0); }
+let toastT;
+function toast(msg){ const t = document.getElementById('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { t.hidden = true; }, 3200); }
+let installEvt = null;
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; });
+
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-act]');
+  if (!b) return;
+  const act = b.dataset.act;
+  if (act === 'modal-bg'){ if (e.target === b) closeModal(); return; }
+  if (act === 'close') return closeModal();
+  if (act === 'reload') return location.reload();
+  if (act === 'retry'){ S.err = null; loadCfg(); loadMon(); render(); return; }
+  if (act === 'prev') return goMonth(shiftKey(S.monKey, -1));
+  if (act === 'next') return goMonth(shiftKey(S.monKey, 1));
+  if (act === 'today') return goMonth(CUR);
+  if (act === 'menu') return openMenu();
+  if (act === 'logout') return logout();
+  if (act === 'edit-cats'){ closeModal(); startWizard(clone(S.cfg)); return; }
+  if (act === 'install'){
+    if (installEvt){ installEvt.prompt(); installEvt = null; closeModal(); }
+    else toast('Sur iPhone : bouton Partager puis « Sur l’écran d’accueil ». Sur Android : menu ⋮ puis « Installer l’appli ».');
+    return;
+  }
+  if (act === 'slip'){ fileEl.click(); return; }
+  if (act === 'slip-manual'){ slipConfirm(null, ''); return; }
+  if (act === 'slip-ok'){
+    const v = parseAmt(document.getElementById('slip-amt').value);
+    if (v == null || Number.isNaN(v) || v < 0){ document.getElementById('slip-err').textContent = 'Écris un montant, par exemple 930 ou 1 245,50.'; return; }
+    const m = clone(mon()); m.entrees.salaire = v;
+    if (b.dataset.read) m.bulletin = {net: v, periode: b.dataset.periode || null, lu: new Date().toISOString()};
+    closeModal(); saveMon(m); toast('Mois débloqué : salaire de ' + fmt(v)); return;
+  }
+  if (act === 'del-dep'){ const m = clone(mon()); m.depenses = m.depenses.filter(d => d.id !== b.dataset.id); saveMon(m); return; }
+  if (act === 'chip'){ document.getElementById('dn-' + b.dataset.cat).value = b.dataset.v; document.getElementById('da-' + b.dataset.cat).focus(); return; }
+  /* assistant */
+  if (act === 'tog'){
+    const g = b.dataset.g, id = b.dataset.id;
+    if (g === 'entrees' && id === 'salaire'){ toast('Le salaire est obligatoire : c’est lui qui débloque chaque mois.'); return; }
+    if (W.sel[g].has(id)) W.sel[g].delete(id); else W.sel[g].add(id);
+    const on = W.sel[g].has(id);
+    b.setAttribute('aria-pressed', on);
+    const nom = groupItems(g).find(x => x[0] === id)[1];
+    b.innerHTML = (on ? '<span class="ck" aria-hidden="true">✓</span>' : '') + esc(nom);
+    return;
+  }
+  if (act === 'wz-next'){ W.step = 2; drawWizard(); window.scrollTo(0, 0); return; }
+  if (act === 'wz-back'){ W.step = 1; drawWizard(); window.scrollTo(0, 0); return; }
+  if (act === 'wz-cancel'){ W = null; S.view = 'main'; render(); return; }
+  if (act === 'wz-save'){
+    if (Object.values(W.amounts).some(v => Number.isNaN(v))){ document.getElementById('wz-msg').textContent = 'Un montant n’est pas un nombre. Écris par exemple 350 ou 7,99.'; return; }
+    const cfg = wizardCfg();
+    S.cfg = cfg; S.cfgLoaded = true; Docs.save('config', cfg);
+    const first = !W.editing;
+    W = null; S.view = 'main'; render(); window.scrollTo(0, 0);
+    toast(first ? 'Budget créé !' : 'Catégories enregistrées');
+  }
+});
+
+app.addEventListener('submit', e => {
+  const f = e.target;
+  if (f.classList.contains('custom')){
+    e.preventDefault();
+    const g = f.dataset.g, inp = f.querySelector('input'), nom = inp.value.trim();
+    if (!nom) return;
+    const existing = groupItems(g).find(([, n]) => norm(n) === norm(nom));
+    if (existing){ W.sel[g].add(existing[0]); }
+    else { const id = 'c-' + rid(); W.custom[g].push([id, nom]); W.sel[g].add(id); }
+    drawWizard();
+    const again = document.getElementById('cu-' + g); if (again) again.focus();
+    return;
+  }
+  if (f.classList.contains('add')){
+    e.preventDefault();
+    const cat = f.dataset.cat;
+    const nEl = document.getElementById('dn-' + cat), aEl = document.getElementById('da-' + cat);
+    const nom = nEl.value.trim(), v = parseAmt(aEl.value);
+    if (!nom){ toast('Donne un nom à la dépense.'); nEl.focus(); return; }
+    if (v == null || Number.isNaN(v)){ toast('Écris un montant, par exemple 12,50.'); aEl.focus(); return; }
+    const m = clone(mon());
+    m.depenses = [...m.depenses, {id: rid(), cat, nom, montant: v, le: new Date().toISOString().slice(0, 10)}];
+    nEl.blur(); aEl.blur();
+    saveMon(m);
+    toast('Ajouté : ' + nom + ' · ' + fmt(v));
+  }
+});
+
+app.addEventListener('change', e => {
+  const el = e.target;
+  if (!el.dataset || !el.dataset.field) return;
+  const v = parseAmt(el.value);
+  if (Number.isNaN(v)){ toast('Écris un montant, par exemple 350 ou 7,99.'); return; }
+  const m = clone(mon());
+  if (el.dataset.field === 'entree'){ if (v == null) delete m.entrees[el.dataset.id]; else m.entrees[el.dataset.id] = v; }
+  else if (el.dataset.field === 'fixe'){ if (v == null) delete m.fixesReel[el.dataset.id]; else m.fixesReel[el.dataset.id] = v; }
+  saveMon(m);
+});
+
+/* ---------- démarrage ---------- */
+S.user = LS.get('user', null);
+if (S.user) afterLogin(); else { S.view = 'auth'; render(); }
+
+/* ---------- mise à jour automatique (même quand l'appli est sur l'écran d'accueil) ---------- */
+function busyNow(){ return S.view === 'wizard' || !!modalEl.innerHTML || inputFocused(); }
+let checking = false;
+function doReload(url){
+  if (busyNow()){ pendingReload = url; return; }
+  toast('Nouvelle version, mise à jour…');
+  setTimeout(() => location.replace(url), 600);
+}
+async function checkUpdate(){
+  if (pendingReload && !busyNow()){ const u = pendingReload; pendingReload = null; doReload(u); return; }
+  if (checking || APP_VER === 'dev' || !navigator.onLine || location.protocol !== 'https:') return;
+  checking = true;
+  try {
+    const r = await fetch('version.json?t=' + Date.now(), {cache: 'no-store'});
+    const v = (await r.json()).v;
+    let tried = null; try { tried = sessionStorage.getItem('budget-upd-tried'); } catch(e){}
+    if (v && v !== APP_VER && tried !== v){
+      try { sessionStorage.setItem('budget-upd-tried', v); } catch(e){}
+      try { const regs = await navigator.serviceWorker.getRegistrations(); await Promise.all(regs.map(g => g.update().catch(() => {}))); } catch(e){}
+      doReload(location.pathname + '?v=' + encodeURIComponent(v));
+    }
+  } catch(e){}
+  checking = false;
+}
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') checkUpdate(); });
+window.addEventListener('online', checkUpdate);
+document.addEventListener('focusout', () => setTimeout(() => { if (pendingReload && !busyNow()) checkUpdate(); }, 300));
+setTimeout(checkUpdate, 1200);
+setInterval(checkUpdate, 5 * 60 * 1000);
+
+if ('serviceWorker' in navigator && location.protocol === 'https:'){
+  let reloaded = false;
+  const hadController = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadController && !reloaded && !busyNow()){ reloaded = true; location.reload(); } });
+  navigator.serviceWorker.register('sw.js', {scope: './', updateViaCache: 'none'}).then(r => r.update()).catch(() => {});
+}
+})();
+</script>
+</body>
+</html>
