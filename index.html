@@ -255,6 +255,36 @@ h1,h2,h3{font-family:var(--font-display);text-wrap:balance;margin:0}
 .bio-s{color:var(--muted)}
 #lock{animation:fadein .15s ease-out}
 @keyframes fadein{from{opacity:.6}to{opacity:1}}
+/* bandeau camembert */
+.spend{display:flex;align-items:center;gap:12px;background:var(--surface);border-radius:16px;padding:10px 12px;border:0;width:100%;text-align:left}
+.spend svg{flex:none}
+.spend .lg{display:flex;gap:6px 12px;overflow-x:auto;scrollbar-width:none;flex:1;min-width:0;flex-wrap:wrap;max-height:44px}
+.spend .lg::-webkit-scrollbar{display:none}
+.spend .it{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;white-space:nowrap}
+.spend .it i{width:8px;height:8px;border-radius:50%;background:var(--c);flex:none}
+.spend .it b{color:var(--muted);font-weight:600}
+.row.dep{cursor:pointer}
+.row.dep:hover .lbl{color:var(--accent)}
+/* objectifs */
+.goal{border:0;background:none;width:100%;text-align:left;padding:10px 0;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:6px}
+.goal:first-of-type{border-top:0}
+.goal .t{display:flex;justify-content:space-between;gap:8px;font-weight:700}
+.goal .bar{height:9px;border-radius:999px;background:var(--bg);overflow:hidden}
+.goal .bar span{display:block;height:100%;background:var(--good);border-radius:999px}
+.goal small{color:var(--muted);font-size:12px}
+/* bilan */
+.big-q{font-family:var(--font-display);font-size:24px;font-weight:800;line-height:1.15;margin:0}
+.kpi{display:flex;justify-content:space-between;align-items:baseline;padding:8px 0;border-top:1px solid var(--line)}
+.kpi:first-child{border-top:0}
+.kpi b{font-family:var(--font-display);font-size:18px}
+/* compte à rebours paye */
+.payday{display:flex;align-items:center;gap:12px;background:var(--surface);border-radius:16px;padding:10px 14px;border:0;width:100%;text-align:left}
+.payday .emo{font-size:34px;line-height:1;flex:none}
+.payday .emo.fire{animation:flame 1.2s ease-in-out infinite}
+@keyframes flame{0%,100%{transform:scale(1) rotate(-3deg)}50%{transform:scale(1.12) rotate(3deg)}}
+@media (prefers-reduced-motion: reduce){.payday .emo.fire{animation:none}}
+.payday b{font-family:var(--font-display);font-size:17px;display:block}
+.payday small{color:var(--muted);font-size:13px}
 /* modale */
 .overlay{position:fixed;inset:0;background:rgba(10,14,22,.5);display:flex;align-items:flex-end;justify-content:center;z-index:20}
 .sheet{background:var(--bg);width:100%;max-width:560px;max-height:92%;overflow:auto;border-radius:22px 22px 0 0;padding:18px 16px calc(24px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:14px}
@@ -282,7 +312,7 @@ h1,h2,h3{font-family:var(--font-display);text-wrap:balance;margin:0}
 <div id="modal"></div>
 <div id="toast" class="toast" hidden></div>
 
-<script>window.__APP_VER__="2026.11.19-1604";</script>
+<script>window.__APP_VER__="2026.11.19-1612";</script>
 <script>
 (() => {
 "use strict";
@@ -692,7 +722,7 @@ function renderMain(){
     <section class="sec" style="--c:${col}" aria-labelledby="h-c-${esc(k.id)}">
       <div class="sec-h"><h2 id="h-c-${esc(k.id)}">${esc(k.nom)}</h2><span class="tot num">${fmt(tot)}</span></div>
       ${list.length ? list.map(d => `
-        <div class="row"><span class="lbl">${esc(d.nom)}</span><span class="dots"></span><span class="fixed-amt num">${fmt(d.montant)}</span>
+        <div class="row dep" data-act="dep-edit" data-id="${esc(d.id)}" role="button" tabindex="0" aria-label="Modifier ${esc(d.nom)}"><span class="lbl">${esc(d.nom)}${d.le && d.le.length === 10 ? `<small>${d.le.slice(8, 10)}/${d.le.slice(5, 7)}</small>` : ''}</span><span class="dots"></span><span class="fixed-amt num">${fmt(d.montant)}</span>
         <button class="del" data-act="del-dep" data-id="${esc(d.id)}" aria-label="Supprimer ${esc(d.nom)}">×</button></div>`).join('')
         : `<p class="empty">Rien pour l’instant.</p>`}
       <form class="add" data-cat="${esc(k.id)}" autocomplete="off">
@@ -714,6 +744,8 @@ function renderMain(){
       <div class="stat" style="--c:var(--sub)"><p class="k">Abonnements</p><p class="v num">${fmt(t.abos)}</p></div>
       <div class="stat" style="--c:var(--pink)"><p class="k">Dépensé ce mois</p><p class="v num">${fmt(t.depenses)}</p></div>
     </div>
+    ${paydayBand(c)}
+    ${spendBand(c, m, t)}
     <nav class="tabs" id="tabs" role="tablist" aria-label="Catégories">
       ${panels.map((p, i) => `<button class="tab" role="tab" id="tab-${esc(p.id)}" style="--c:${p.c}" data-act="panel" data-i="${i}" aria-selected="${i === cur}" aria-controls="pn-${esc(p.id)}">${esc(p.nom)} <small class="num">${fmt(p.tot)}</small></button>`).join('')}
     </nav>
@@ -723,8 +755,10 @@ function renderMain(){
     <div class="dotsnav" aria-hidden="true">${panels.map((p, i) => `<span class="${i === cur ? 'on' : ''}"></span>`).join('')}</div>
     ${LS.get('swiped', false) ? '' : '<p class="swipe-hint">Glisse vers le côté pour passer d’une catégorie à l’autre</p>'}
     ${aboCard(c, t)}
+    ${goalsCard(c)}
     <p class="note">Connecté en tant que <b>${esc(S.user.pseudo)}</b>. Ton budget est privé.</p>`;
   setupSlider(cur);
+  maybeBilan();
   renderHero();
 }
 
@@ -844,6 +878,198 @@ function aboEdit(id){
 }
 function saveCfg(cfg){ S.cfg = cfg; Docs.save('config', cfg); }
 
+/* ---------- plus que X jours avant la paye ---------- */
+function paydayBand(c){
+  if (S.monKey !== CUR) return '';
+  if (!c.jourPaie) return `<button class="payday" data-act="payday-set"><span class="emo" aria-hidden="true">📅</span><span><b>Quel jour tu es payé ?</b><small>Pour savoir combien de jours il reste avant la paye.</small></span></button>`;
+  const d = nextDebit(c.jourPaie);
+  const pick = arr => arr[(new Date().getDate() + (c.jourPaie || 0)) % arr.length];
+  let emo, txt, sub, fire = false;
+  if (d === 0){ emo = '🤑'; txt = 'C’est jour de paye !'; sub = pick(['Le compte respire enfin.', 'Ne dépense pas tout aujourd’hui 😏', 'Pense à déposer ton bulletin.']); }
+  else if (d === 1){ emo = '🔥'; fire = true; txt = 'Demain c’est la paye !'; sub = pick(['Encore une nuit à tenir.', 'Le banquier prépare les billets.', 'Tu sens l’odeur de la thune ?']); }
+  else if (d <= 3){ emo = '🔥'; fire = true; txt = `Plus que ${d} jours avant la paye !`; sub = pick(['C’est chaud, ça arrive !', 'Le compte à rebours est lancé.', 'Tiens bon, c’est presque fini.']); }
+  else if (d <= 7){ emo = '😄'; txt = `Plus que ${d} jours avant la paye`; sub = pick(['On voit le bout du tunnel.', 'Moins d’une semaine, tranquille.', 'Ça sent bon tout ça.']); }
+  else if (d <= 15){ emo = '😐'; txt = `Plus que ${d} jours avant la paye`; sub = pick(['On garde le cap.', 'Mi-parcours, pas de folies.', 'Le resto peut attendre un peu.']); }
+  else { emo = '😩'; txt = `Plus que ${d} jours avant la paye`; sub = pick(['Les pâtes au beurre te saluent.', 'Ça va être long…', 'Courage, c’est un marathon.']); }
+  return `<button class="payday" data-act="payday-set" aria-label="${esc(txt)}. Changer le jour de paie"><span class="emo${fire ? ' fire' : ''}" aria-hidden="true">${emo}</span><span><b>${esc(txt)}</b><small>${esc(sub)}</small></span></button>`;
+}
+function paydaySheet(){
+  openModal(`
+    <div class="sheet-h"><h2>Ton jour de paie</h2><button class="icon-btn" data-act="close" aria-label="Fermer">×</button></div>
+    <form class="card" id="payday-form" autocomplete="off">
+      <div class="field"><label for="pd-day">Tu es payé le combien du mois ? (1 à 31)</label><input id="pd-day" inputmode="numeric" maxlength="2" value="${S.cfg.jourPaie || ''}" placeholder="ex. 1 ou 28"></div>
+      <p class="msg" id="pd-msg" role="status"></p>
+      <button class="btn" type="submit">Enregistrer</button>
+    </form>`);
+}
+
+/* ---------- bandeau : où part ton argent ---------- */
+function spendBand(c, m, t){
+  const parts = [];
+  if (t.fixes > 0) parts.push({id: 'fixes', nom: 'Fixes', v: t.fixes, col: 'var(--muted)'});
+  if (t.abos > 0) parts.push({id: 'abos', nom: 'Abonnements', v: t.abos, col: 'var(--sub)'});
+  c.cats.forEach((k, i) => { const v = (m.depenses || []).filter(d => d.cat === k.id).reduce((s, d) => s + (d.montant || 0), 0); if (v > 0) parts.push({id: 'c-' + k.id, nom: k.nom, v, col: CAT_COLORS[i % CAT_COLORS.length]}); });
+  const tot = parts.reduce((s, p) => s + p.v, 0);
+  if (!tot) return '';
+  const R = 22, C = 2 * Math.PI * R; let off = 0;
+  const arcs = parts.map(p => { const len = p.v / tot * C; const a = `<circle r="${R}" cx="30" cy="30" fill="none" stroke="${p.col}" stroke-width="10" stroke-dasharray="${len.toFixed(2)} ${(C - len).toFixed(2)}" stroke-dashoffset="${(-off).toFixed(2)}" transform="rotate(-90 30 30)"/>`; off += len; return a; }).join('');
+  return `<button class="spend" data-act="spend-detail" aria-label="Où part ton argent ce mois-ci">
+    <svg width="60" height="60" viewBox="0 0 60 60" aria-hidden="true">${arcs}</svg>
+    <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px"><span style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Où part ton argent · ${fmt(tot)}</span>
+    <span class="lg">${parts.sort((a, b) => b.v - a.v).map(p => `<span class="it" style="--c:${p.col}"><i></i>${esc(p.nom)} <b>${Math.round(p.v / tot * 100)} %</b></span>`).join('')}</span></span>
+  </button>`;
+}
+function spendDetail(){
+  const c = S.cfg, m = mon(), t = totals();
+  const rows = [];
+  if (t.fixes > 0) rows.push(['Dépenses fixes', t.fixes, 'var(--muted)']);
+  if (t.abos > 0) rows.push(['Abonnements', t.abos, 'var(--sub)']);
+  c.cats.forEach((k, i) => { const v = (m.depenses || []).filter(d => d.cat === k.id).reduce((s, d) => s + (d.montant || 0), 0); rows.push([k.nom, v, CAT_COLORS[i % CAT_COLORS.length]]); });
+  const tot = rows.reduce((s, r) => s + r[1], 0) || 1;
+  openModal(`
+    <div class="sheet-h"><h2>Où part ton argent</h2><button class="icon-btn" data-act="close" aria-label="Fermer">×</button></div>
+    <div class="card">${rows.sort((a, b) => b[1] - a[1]).map(([n, v, col]) => `
+      <div class="goal" style="padding:8px 0"><div class="t"><span>${esc(n)}</span><span class="num">${fmt(v)} · ${Math.round(v / tot * 100)} %</span></div>
+      <div class="bar"><span style="width:${Math.round(v / tot * 100)}%;background:${col}"></span></div></div>`).join('')}</div>`);
+}
+
+/* ---------- modifier une dépense ---------- */
+function depEdit(id){
+  const d = (mon().depenses || []).find(x => x.id === id); if (!d) return;
+  openModal(`
+    <div class="sheet-h"><h2>Modifier la dépense</h2><button class="icon-btn" data-act="close" aria-label="Fermer">×</button></div>
+    <form class="card" id="dep-form" data-id="${esc(d.id)}" autocomplete="off">
+      <div class="found"><input id="de-amt" inputmode="decimal" value="${esc(amtVal(d.montant))}" aria-label="Montant"><strong>€</strong></div>
+      <div class="field"><label for="de-nom">Nom</label><input id="de-nom" value="${esc(d.nom)}" maxlength="60"></div>
+      <div class="field"><label for="de-cat">Catégorie</label><select id="de-cat" class="qtext">${S.cfg.cats.map(k => `<option value="${esc(k.id)}"${k.id === d.cat ? ' selected' : ''}>${esc(k.nom)}</option>`).join('')}</select></div>
+      <div class="field"><label for="de-date">Date</label><input id="de-date" type="date" value="${esc(d.le && d.le.length === 10 ? d.le : '')}"></div>
+      <p class="msg" id="de-msg" role="status"></p>
+      <div class="actions"><button class="btn" type="submit" style="flex:1">Enregistrer</button><button class="btn light" type="button" data-act="del-dep" data-id="${esc(d.id)}">Supprimer</button></div>
+    </form>`);
+}
+
+/* ---------- objectifs d'épargne ---------- */
+function goalsCard(c){
+  const gs = c.objectifs || [];
+  const mLeft = d => { if (!d) return null; const [y, mo] = d.split('-').map(Number), n = new Date(); return (y - n.getFullYear()) * 12 + (mo - 1 - n.getMonth()) + 1; };
+  return `
+    <section class="sec" style="--c:var(--good)" aria-labelledby="h-goal">
+      <div class="sec-h"><h2 id="h-goal">Objectifs d’épargne</h2><button class="btn link" style="padding:0" data-act="goal-new">+ Nouveau</button></div>
+      ${gs.length ? gs.map(g => {
+        const pct = g.cible > 0 ? Math.min(100, Math.round((g.deja || 0) / g.cible * 100)) : 0, left = Math.max(0, g.cible - (g.deja || 0)), ml = mLeft(g.date);
+        return `<button class="goal" data-act="goal-edit" data-id="${esc(g.id)}">
+          <span class="t"><span>${esc(g.nom)}</span><span class="num">${fmt(g.deja || 0)} / ${fmt(g.cible)}</span></span>
+          <span class="bar"><span style="width:${pct}%"></span></span>
+          <small>${pct >= 100 ? '🎉 Objectif atteint !' : `${pct} % · encore ${fmt(left)}` + (ml && ml > 0 ? ` · ${fmt(left / ml)} par mois jusqu’en ${esc(monthLabel(g.date).toLowerCase())}` : '')}</small>
+        </button>`; }).join('')
+      : `<p class="empty">Vacances, permis, voiture… Fixe-toi un objectif et suis ce que tu mets de côté.</p>`}
+    </section>`;
+}
+function goalSheet(id){
+  const g = id ? (S.cfg.objectifs || []).find(x => x.id === id) : null;
+  openModal(`
+    <div class="sheet-h"><h2>${g ? esc(g.nom) : 'Nouvel objectif'}</h2><button class="icon-btn" data-act="close" aria-label="Fermer">×</button></div>
+    ${g ? `<form class="card" id="goal-add" data-id="${esc(g.id)}" autocomplete="off">
+      <p><b>Mettre de l’argent de côté</b></p>
+      <div class="found"><input id="ga-amt" inputmode="decimal" placeholder="0,00" aria-label="Montant à ajouter"><strong>€</strong></div>
+      <div class="actions"><button class="btn" type="submit" style="flex:1">Ajouter</button><button class="btn light" type="button" data-act="goal-take" data-id="${esc(g.id)}">Retirer</button></div>
+    </form>` : ''}
+    <form class="card" id="goal-form" data-id="${g ? esc(g.id) : ''}" autocomplete="off">
+      <div class="field"><label for="go-nom">Nom</label><input id="go-nom" value="${g ? esc(g.nom) : ''}" placeholder="ex. Vacances, Permis" maxlength="40"></div>
+      <div class="field"><label for="go-cible">Montant à atteindre</label><input id="go-cible" inputmode="decimal" value="${g ? esc(amtVal(g.cible)) : ''}" placeholder="ex. 600"></div>
+      <div class="field"><label for="go-date">Pour quand ? (facultatif)</label><input id="go-date" type="month" value="${g && g.date ? esc(g.date) : ''}"></div>
+      ${g ? '' : `<div class="field"><label for="go-deja">Déjà de côté (facultatif)</label><input id="go-deja" inputmode="decimal" placeholder="0"></div>`}
+      <p class="msg" id="go-msg" role="status"></p>
+      <div class="actions"><button class="btn${g ? ' light' : ''}" type="submit" style="flex:1">${g ? 'Enregistrer les changements' : 'Créer l’objectif'}</button>${g ? `<button class="btn light" type="button" data-act="goal-del" data-id="${esc(g.id)}">Supprimer</button>` : ''}</div>
+    </form>`);
+}
+function goalAdd(id, v){
+  const cfg = clone(S.cfg); const g = (cfg.objectifs || []).find(x => x.id === id); if (!g) return;
+  g.deja = Math.max(0, Math.round(((g.deja || 0) + v) * 100) / 100); saveCfg(cfg);
+}
+
+/* ---------- bilan de fin de mois ---------- */
+let BILAN = null;
+function bilanTarget(){
+  const n = new Date(), last = new Date(n.getFullYear(), n.getMonth() + 1, 0).getDate();
+  if (n.getDate() >= last - 2) return CUR;
+  if (n.getDate() <= 7) return shiftKey(CUR, -1);
+  return null;
+}
+function maybeBilan(){
+  if (BILAN || locked || modalEl.innerHTML || S.view !== 'main' || !S.cfg || !S.monLoaded) return;
+  const k = bilanTarget(); if (!k || S.monKey !== k) return;
+  const m = mon(); if (salaireReel(m) == null || m.bilan) return;
+  const flag = 'bilan-vu:' + S.user.id + ':' + k; if (LS.get(flag, false)) return;
+  LS.set(flag, true);
+  setTimeout(() => openBilan(), 500);
+}
+function openBilan(){
+  const t = totals();
+  BILAN = {step: 1, key: S.monKey, prevu: t.reste};
+  drawBilan();
+}
+async function drawBilan(){
+  const b = BILAN, mois = monthLabel(b.key, false).toLowerCase();
+  const head = `<div class="sheet-h"><h2>Bilan de ${esc(mois)}</h2><button class="icon-btn" data-act="bilan-close" aria-label="Fermer">×</button></div>
+    <div class="steps" aria-hidden="true">${[1,2,3,4].map(i => `<span class="${i <= b.step ? 'on' : ''}"></span>`).join('')}</div>`;
+  if (b.step === 1){
+    openModal(head + `<div class="card">
+      <p class="meta">D’après l’appli, il te reste <b class="num">${fmt(b.prevu)}</b>.</p>
+      <p class="big-q">Tu finis ${esc(mois)} dans le positif ?</p>
+      <button class="btn" data-act="bilan-pos" data-v="oui">Oui 🙂</button>
+      <button class="btn light" data-act="bilan-pos" data-v="non">Non, je suis à découvert</button>
+      <button class="btn light" data-act="bilan-pos" data-v="?">Je ne sais pas encore</button></div>`);
+  } else if (b.step === 2){
+    openModal(head + `<form class="card" id="bilan-reel" autocomplete="off">
+      <p class="big-q">Combien il te reste vraiment sur ton compte ?</p>
+      <p class="meta">Regarde ton appli de banque. ${b.pos === 'non' ? 'Mets un « - » si tu es à découvert (ex. -45).' : ''} C’est facultatif.</p>
+      <div class="found"><input id="bi-reel" inputmode="decimal" placeholder="${esc(amtVal(Math.round(b.prevu)))}" aria-label="Ce qui reste sur ton compte"><strong>€</strong></div>
+      <button class="btn" type="submit">Continuer</button>
+      <button class="btn link" type="button" data-act="bilan-skip">Passer</button></form>`);
+  } else if (b.step === 3){
+    const gs = S.cfg.objectifs || [];
+    const ecart = b.reel != null ? b.reel - b.prevu : null;
+    openModal(head + `<div class="card">
+      ${ecart != null && Math.abs(ecart) >= 5 ? (ecart < 0
+        ? `<p class="warn">Il te reste <b>${fmt(-ecart)}</b> de moins que prévu : il y a sûrement des dépenses que tu n’as pas notées.</p><button class="btn light" data-act="bilan-releve">Les retrouver avec mon relevé</button>`
+        : `<p class="warn" style="background:var(--good-soft)">Il te reste <b>${fmt(ecart)}</b> de plus que prévu. Bien joué, ou une rentrée d’argent pas notée !</p>`)
+        : (ecart != null ? `<p class="warn" style="background:var(--good-soft)">Ton budget colle à ton compte, à quelques euros près. 👌</p>` : '')}
+      ${(b.pos === 'oui' && (b.reel ?? b.prevu) > 0) ? (gs.length ? `
+        <p class="big-q">Tu mets une partie de côté ?</p>
+        <form id="bilan-save" style="display:flex;flex-direction:column;gap:10px">
+          <select id="bi-goal" class="qtext">${gs.map(g => `<option value="${esc(g.id)}">${esc(g.nom)} (${fmt(g.deja || 0)} / ${fmt(g.cible)})</option>`).join('')}</select>
+          <div class="found"><input id="bi-amt" inputmode="decimal" placeholder="${esc(amtVal(Math.max(0, Math.floor((b.reel ?? b.prevu) / 2))))}" aria-label="Montant à mettre de côté"><strong>€</strong></div>
+          <button class="btn" type="submit">Mettre de côté</button></form>`
+        : `<p>Tu finis dans le positif : c’est le bon moment pour créer un objectif d’épargne.</p><button class="btn light" data-act="bilan-newgoal">Créer un objectif</button>`) : ''}
+      ${b.pos === 'non' ? `<p>Pas grave, ça arrive. Le mois prochain, regarde le « reste par jour » sous le gros chiffre : c’est le plus simple pour ne pas dépasser.</p>` : ''}
+      <button class="btn${b.pos === 'oui' && gs.length ? ' link' : ''}" data-act="bilan-next">Voir mon résumé</button></div>`);
+  } else {
+    const all = await loadAllMonths().catch(() => ({}));
+    const m = all[b.key] || mon(), prev = all[shiftKey(b.key, -1)];
+    const sumCat = (mm, id) => ((mm && mm.depenses) || []).filter(d => d.cat === id).reduce((s, d) => s + (d.montant || 0), 0);
+    const cats = S.cfg.cats.map(k => ({k, v: sumCat(m, k.id), p: prev ? sumCat(prev, k.id) : null})).filter(x => x.v > 0 || x.p).sort((a, c) => c.v - a.v);
+    const totM = cats.reduce((s, x) => s + x.v, 0), totP = prev ? cats.reduce((s, x) => s + (x.p || 0), 0) : null;
+    const top = cats[0], up = cats.filter(x => x.p != null && x.v - x.p >= 15).sort((a, c) => (c.v - c.p) - (a.v - a.p))[0];
+    const nbDep = ((m && m.depenses) || []).length;
+    openModal(head + `<div class="card">
+      <p class="big-q">Ton mois en bref</p>
+      <div>
+        <div class="kpi"><span>Reste prévu par l’appli</span><b class="num">${fmt(b.prevu)}</b></div>
+        ${b.reel != null ? `<div class="kpi"><span>Reste sur ton compte</span><b class="num" style="color:${b.reel < 0 ? 'var(--bad)' : 'var(--good)'}">${fmt(b.reel)}</b></div>` : ''}
+        <div class="kpi"><span>Dépenses notées</span><b class="num">${nbDep} · ${fmt(totM)}</b></div>
+        ${totP != null ? `<div class="kpi"><span>Par rapport à ${esc(monthLabel(shiftKey(b.key, -1), false).toLowerCase())}</span><b class="num" style="color:${totM > totP ? 'var(--bad)' : 'var(--good)'}">${totM > totP ? '+' : '−'} ${fmt(Math.abs(totM - totP))}</b></div>` : ''}
+        ${top ? `<div class="kpi"><span>Là où tu as le plus dépensé</span><b>${esc(top.k.nom)}</b></div>` : ''}
+      </div>
+      ${up ? `<p class="warn">${esc(up.k.nom)} : <b>+ ${fmt(up.v - up.p)}</b> par rapport au mois d’avant.</p>` : ''}
+      <button class="btn" data-act="bilan-done">Terminer</button></div>`);
+  }
+}
+function bilanSave(){
+  const b = BILAN; if (!b) return;
+  if (S.monKey === b.key){ const m = clone(mon()); m.bilan = {positif: b.pos || null, reel: b.reel ?? null, prevu: Math.round(b.prevu * 100) / 100, le: new Date().toISOString().slice(0, 10)}; saveMon(m); }
+}
+
 /* ---------- ajout rapide (bouton +) ---------- */
 let Q = null;
 function learnedCat(nom){
@@ -905,6 +1131,50 @@ modalEl.addEventListener('submit', e => {
     saveCfg(cfg); closeModal(); render(); toast('Abonnement mis à jour'); return;
   }
   if (f.id === 'pin-form'){ e.preventDefault(); return; }
+  if (f.id === 'payday-form'){
+    e.preventDefault();
+    const v = parseInt(document.getElementById('pd-day').value, 10);
+    if (!(v >= 1 && v <= 31)){ document.getElementById('pd-msg').textContent = 'Écris un jour entre 1 et 31.'; return; }
+    const cfg = clone(S.cfg); cfg.jourPaie = v; saveCfg(cfg); closeModal(); render(); return;
+  }
+  if (f.id === 'dep-form'){
+    e.preventDefault();
+    const v = parseAmt(document.getElementById('de-amt').value), nom = document.getElementById('de-nom').value.trim(), cat = document.getElementById('de-cat').value, le = document.getElementById('de-date').value;
+    const msg = t => { document.getElementById('de-msg').textContent = t; };
+    if (v == null || Number.isNaN(v) || v <= 0) return msg('Écris un montant, par exemple 12,50.');
+    if (!nom) return msg('Donne un nom à la dépense.');
+    const m = clone(mon()); const d = m.depenses.find(x => x.id === f.dataset.id); if (!d) return closeModal();
+    if (d.cat !== cat){ const k = stemKey(nom) || norm(nom).trim(); if (k){ const cfg = clone(S.cfg); cfg.appris = {...(cfg.appris || {}), [k]: cat}; saveCfg(cfg); } }
+    Object.assign(d, {montant: v, nom, cat}); if (le) d.le = le;
+    S.panel = 'c-' + cat; closeModal(); saveMon(m); toast('Dépense modifiée'); return;
+  }
+  if (f.id === 'goal-form'){
+    e.preventDefault();
+    const nom = document.getElementById('go-nom').value.trim(), cible = parseAmt(document.getElementById('go-cible').value), date = document.getElementById('go-date').value || null;
+    const dj = document.getElementById('go-deja'), deja = dj ? parseAmt(dj.value) : null;
+    const msg = t => { document.getElementById('go-msg').textContent = t; };
+    if (!nom) return msg('Donne un nom à ton objectif.');
+    if (cible == null || Number.isNaN(cible) || cible <= 0) return msg('Écris le montant à atteindre, par exemple 600.');
+    const cfg = clone(S.cfg); cfg.objectifs = cfg.objectifs || [];
+    if (f.dataset.id){ const g = cfg.objectifs.find(x => x.id === f.dataset.id); Object.assign(g, {nom, cible}); if (date) g.date = date; else delete g.date; }
+    else cfg.objectifs.push({id: rid(), nom, cible, deja: deja && !Number.isNaN(deja) ? deja : 0, ...(date ? {date} : {})});
+    saveCfg(cfg); closeModal(); render(); toast(f.dataset.id ? 'Objectif modifié' : 'Objectif créé'); if (BILAN){ drawBilan(); } return;
+  }
+  if (f.id === 'goal-add'){
+    e.preventDefault();
+    const v = parseAmt(document.getElementById('ga-amt').value); if (v == null || Number.isNaN(v) || v <= 0) return;
+    goalAdd(f.dataset.id, v); closeModal(); render(); toast('+ ' + fmt(v) + ' mis de côté'); return;
+  }
+  if (f.id === 'bilan-reel'){
+    e.preventDefault();
+    const v = parseAmt(document.getElementById('bi-reel').value); BILAN.reel = v == null || Number.isNaN(v) ? null : v;
+    BILAN.step = 3; drawBilan(); return;
+  }
+  if (f.id === 'bilan-save'){
+    e.preventDefault();
+    const v = parseAmt(document.getElementById('bi-amt').value); if (v == null || Number.isNaN(v) || v <= 0) return;
+    goalAdd(document.getElementById('bi-goal').value, v); toast('+ ' + fmt(v) + ' mis de côté'); BILAN.step = 4; drawBilan(); return;
+  }
 });
 
 /* ---------- recherche ---------- */
@@ -1317,7 +1587,8 @@ function analyseBank(ops){
     if (R.non.includes(x.key)){ x.exclu = true; x.auto = true; x.pick = false; return; }
     if (R.oui.includes(x.key)) return;
     x.pick = false;
-    const g = groups[d[0] + '|' + x.key] || (groups[d[0] + '|' + x.key] = {kind: d[0], key: x.key, items: []});
+    const gk = d[0] + '|' + x.key + '|' + x.v.toFixed(2);
+    const g = groups[gk] || (groups[gk] = {kind: d[0], key: x.key, items: []});
     g.items.push(x.i);
   });
   const ABO_RE = /(abonnement|subscription|netflix|spotify|deezer|disney|canal ?\+|canalplus|prime video|amazon prime|amzn prime|youtube|apple\.com|itunes|google play|google one|playstation|psn|xbox|game ?pass|nintendo|basic ?fit|fitness park|keep ?cool|on air|sfr|orange|bouygues|free mobile|free telecom|sosh|red by|b&you|crunchyroll|molotov|chatgpt|openai|icloud|dropbox|adobe|microsoft|uber one|deliveroo plus|tinder|bumble|audible|kindle)/;
@@ -1349,15 +1620,16 @@ function bankQuestion(){
     <div class="card">
       <p class="eyebrow">${esc(d[2])}</p>
       <p style="font-family:var(--font-display);font-size:22px;font-weight:800;line-height:1.15">${esc(cleanLabel(its[0].label))}</p>
-      <p class="meta">${its.map(x => esc(x.date.label) + ' · ' + fmt(x.v)).join(' · ')}${its.length > 1 ? ' · total ' + fmt(tot) : ''}</p>
+      <p class="meta">${its.length > 1 ? its.length + ' sorties d’argent : ' : 'Sortie d’argent : '}${its.map(x => esc(x.date.label) + ' − ' + fmt(x.v)).join(' · ')}${its.length > 1 ? ' · total − ' + fmt(tot) : ''}</p>
       <details class="bk-ok" style="background:var(--bg);border-radius:12px;padding:4px 12px">
         <summary>Voir ${its.length > 1 ? 'les ' + its.length + ' opérations' : 'l’opération'}</summary>
         ${its.map(x => {
-          const sameDay = (BANK_OPS || []).filter(o => o !== x && o.date.key === x.date.key && o.date.label === x.date.label && !(o.label === x.label && o.v === x.v));
+          const dn = o => { const [y, mo] = o.date.key.split('-').map(Number); return Date.UTC(y, mo - 1, +o.date.label.slice(0, 2)) / 864e5; };
+          const twin = (BANK_OPS || []).find(o => !o.debit && Math.abs(o.v - x.v) < 0.01 && Math.abs(dn(o) - dn(x)) <= 4);
           return `<div style="padding:8px 0;border-top:1px solid var(--line)">
             <p style="font-weight:700;color:var(--ink)">${esc(x.label)}</p>
             <p>${esc(x.date.label)} · <b class="num" style="color:var(--bad)">− ${fmt(x.v)}</b>${BANK_FILES.length > 1 && BANK_FILES[x.f] ? ' · relevé ' + esc(BANK_FILES[x.f]) : ''}</p>
-            ${sameDay.length ? `<p style="margin-top:6px">Le même jour sur ${BANK_FILES.length > 1 ? 'tes relevés' : 'ton relevé'} :</p><ul style="margin:4px 0 0;padding-left:18px">${sameDay.slice(0, 8).map(o => `<li>${esc(o.label.slice(0, 60))} · <span class="num" style="color:${o.debit ? 'var(--bad)' : 'var(--good)'}">${o.debit ? '−' : '+'} ${fmt(o.v)}</span>${BANK_FILES.length > 1 && BANK_FILES[o.f] ? ' · ' + esc(BANK_FILES[o.f]) : ''}</li>`).join('')}</ul>` : ''}
+            ${twin ? `<p style="margin-top:6px;color:var(--ink)">💡 Une entrée du même montant (+ ${fmt(twin.v)}) apparaît le ${esc(twin.date.label)}${BANK_FILES.length > 1 && BANK_FILES[twin.f] ? ' sur ' + esc(BANK_FILES[twin.f]) : ''} : c’est sûrement un virement entre tes comptes.</p>` : ''}
           </div>`; }).join('')}
       </details>
       <p>${esc(d[3])}</p>
@@ -1481,6 +1753,7 @@ function openMenu(){
       <button class="ditem" data-act="edit-cats">${ic('<path d="M4 6h10M4 12h16M4 18h7"/><circle cx="17" cy="6" r="2"/><circle cx="14" cy="18" r="2"/>')}Mes catégories et montants</button>
       <button class="ditem" data-act="slip-menu">${ic('<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/>')}Déposer un bulletin</button>
       <button class="ditem" data-act="bank">${ic('<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h4"/>')}Vérifier avec mon relevé <small style="margin-left:auto;color:var(--muted);font-weight:600;font-size:12px">facultatif</small></button>
+      <button class="ditem" data-act="bilan">${ic('<path d="M4 19V5M4 19h16M8 15l3-4 3 2 4-6"/>')}Bilan du mois</button>
       <button class="ditem" data-act="lock-settings">${ic('<rect x="5" y="10" width="14" height="11" rx="2.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>')}Code et Face ID</button>
       <button class="ditem" data-act="install">${ic('<rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/>')}Mettre sur l’écran d’accueil</button>
     </div>
@@ -1639,7 +1912,7 @@ document.addEventListener('click', e => {
   const b = e.target.closest('[data-act]');
   if (!b) return;
   const act = b.dataset.act;
-  if (act === 'modal-bg'){ if (e.target === b) closeModal(); return; }
+  if (act === 'modal-bg'){ if (e.target === b){ if (BILAN){ bilanSave(); BILAN = null; } closeModal(); } return; }
   if (act === 'close') return closeModal();
   if (act === 'reload') return location.reload();
   if (act === 'retry'){ S.err = null; loadCfg(); loadMon(); render(); return; }
@@ -1648,6 +1921,20 @@ document.addEventListener('click', e => {
   if (act === 'today') return goMonth(CUR);
   if (act === 'menu') return openMenu();
   if (act === 'quick') return openQuick();
+  if (act === 'dep-edit') return depEdit(b.dataset.id);
+  if (act === 'payday-set') return paydaySheet();
+  if (act === 'spend-detail') return spendDetail();
+  if (act === 'goal-new') return goalSheet(null);
+  if (act === 'goal-edit') return goalSheet(b.dataset.id);
+  if (act === 'goal-del'){ const cfg = clone(S.cfg); cfg.objectifs = (cfg.objectifs || []).filter(g => g.id !== b.dataset.id); saveCfg(cfg); closeModal(); render(); toast('Objectif supprimé'); return; }
+  if (act === 'goal-take'){ const v = parseAmt(document.getElementById('ga-amt').value); if (v == null || Number.isNaN(v) || v <= 0){ toast('Écris d’abord le montant à retirer.'); return; } goalAdd(b.dataset.id, -v); closeModal(); render(); toast('− ' + fmt(v) + ' retiré de l’objectif'); return; }
+  if (act === 'bilan'){ closeModal(); const k = bilanTarget() || S.monKey; if (S.monKey !== k){ goMonth(k); waitMonth(k).then(openBilan); } else openBilan(); return; }
+  if (act === 'bilan-pos'){ BILAN.pos = b.dataset.v; BILAN.step = 2; drawBilan(); return; }
+  if (act === 'bilan-skip'){ BILAN.reel = null; BILAN.step = 3; drawBilan(); return; }
+  if (act === 'bilan-next'){ BILAN.step = 4; drawBilan(); return; }
+  if (act === 'bilan-releve'){ bilanSave(); BILAN = null; BANK_MONTH = S.monKey; bankIntro(''); return; }
+  if (act === 'bilan-newgoal'){ goalSheet(null); return; }
+  if (act === 'bilan-done' || act === 'bilan-close'){ bilanSave(); BILAN = null; closeModal(); return; }
   if (act === 'q-cat'){ Q.cat = b.dataset.id; Q.manual = true; quickMark(); return; }
   if (act === 'search') return openSearch();
   if (act === 's-go'){ closeModal(); S.panel = 'c-' + b.dataset.cat; if (b.dataset.k !== S.monKey) goMonth(b.dataset.k); else render(); return; }
@@ -1738,7 +2025,7 @@ document.addEventListener('click', e => {
     if (b.dataset.read) m.bulletin = {net: v, periode: b.dataset.periode || null, lu: new Date().toISOString()};
     closeModal(); saveMon(m); toast('Mois débloqué : salaire de ' + fmt(v)); return;
   }
-  if (act === 'del-dep'){ const m = clone(mon()); m.depenses = m.depenses.filter(d => d.id !== b.dataset.id); saveMon(m); return; }
+  if (act === 'del-dep'){ const m = clone(mon()); m.depenses = m.depenses.filter(d => d.id !== b.dataset.id); if (modalEl.innerHTML) closeModal(); saveMon(m); toast('Dépense supprimée'); return; }
   if (act === 'chip'){ document.getElementById('dn-' + b.dataset.cat).value = b.dataset.v; document.getElementById('da-' + b.dataset.cat).focus(); return; }
   /* assistant */
   if (act === 'tog'){
