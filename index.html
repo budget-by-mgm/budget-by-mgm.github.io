@@ -238,7 +238,7 @@ h1,h2,h3{font-family:var(--font-display);text-wrap:balance;margin:0}
 <div id="modal"></div>
 <div id="toast" class="toast" hidden></div>
 
-<script>window.__APP_VER__="2026.11.19-1525";</script>
+<script>window.__APP_VER__="2026.11.19-1527";</script>
 <script>
 (() => {
 "use strict";
@@ -875,6 +875,23 @@ function opsFromCsv(text, year){
   });
   return ops;
 }
+const DOUBT = [
+  ['virement', /(\bvir\b|virement|\bvers\b|livret|epargne|\blep\b|\bldd\b|\bpel\b|\bcel\b|assurance vie|compte joint|transfert)/,
+    'Virement', 'Est-ce que c’est vraiment une dépense, ou juste un virement entre tes comptes (livret, épargne, autre compte) ?',
+    [['non', 'Virement entre mes comptes'], ['oui', 'C’est une vraie dépense']]],
+  ['retrait', /(retrait|\bdab\b|distributeur|\bgab\b)/,
+    'Retrait d’espèces', 'Tu as retiré du liquide. Tu veux le compter comme dépense, ou tu notes déjà ce que tu paies en espèces ?',
+    [['oui', 'Le compter comme dépense'], ['non', 'Je note déjà mes dépenses en espèces']]],
+  ['ami', /(lydia|paypal|paylib|wero|sumeria|revolut|western)/,
+    'Envoi d’argent', 'C’est une dépense (ta part d’un resto, un achat…) ou de l’argent prêté / mis de côté que tu vas récupérer ?',
+    [['oui', 'C’est une dépense'], ['non', 'Pas une dépense (prêt, remboursement…)']]],
+];
+function stemKey(label){
+  return norm(label).replace(/\d+/g, ' ').replace(/[^a-z ]/g, ' ')
+    .replace(/\b(cb|sepa|inst|instantane|prlv|carte|paiement|achat|de|du|des|la|le|en|ref|emis|recu|faveur|motif|x)\b/g, ' ')
+    .replace(/\s+/g, ' ').trim().split(' ').slice(0, 4).join(' ');
+}
+function rules(){ const r = (S.cfg && S.cfg.releve) || {}; return {non: r.non || [], oui: r.oui || []}; }
 function analyseBank(ops){
   const m = mon(), c = S.cfg, mk = S.monKey;
   const debits = ops.filter(o => o.debit && o.v > 0);
@@ -892,7 +909,20 @@ function analyseBank(ops){
     if (k >= 0){ used.add(k); return {i, ...o, noted: true, avec: known[k].nom}; }
     return {i, ...o, noted: false, cat: guessCat(o.label), nom: cleanLabel(o.label), pick: true};
   });
-  return {items, other, total: inMonth.reduce((s, o) => s + o.v, 0)};
+  // opérations douteuses : on demande, sauf si on connaît déjà la réponse
+  const R = rules(), groups = {};
+  items.forEach(x => {
+    if (x.noted) return;
+    const t = norm(x.label), d = DOUBT.find(([, re]) => re.test(t));
+    if (!d) return;
+    x.key = stemKey(x.label) || d[0];
+    if (R.non.includes(x.key)){ x.exclu = true; x.auto = true; x.pick = false; return; }
+    if (R.oui.includes(x.key)) return;
+    x.pick = false;
+    const g = groups[d[0] + '|' + x.key] || (groups[d[0] + '|' + x.key] = {kind: d[0], key: x.key, items: []});
+    g.items.push(x.i);
+  });
+  return {items, other, total: inMonth.reduce((s, o) => s + o.v, 0), questions: Object.values(groups), q: 0, remember: true};
 }
 function bankIntro(msg){
   openModal(`
@@ -904,8 +934,29 @@ function bankIntro(msg){
       <button class="btn" data-act="bank-pick">Choisir mon relevé</button>
     </div>`);
 }
+function bankQuestion(){
+  const r = BANK, g = r.questions[r.q], d = DOUBT.find(x => x[0] === g.kind);
+  const its = g.items.map(i => r.items.find(x => x.i === i));
+  const tot = its.reduce((s, x) => s + x.v, 0);
+  openModal(`
+    <div class="sheet-h"><h2>Question ${r.q + 1} sur ${r.questions.length}</h2><button class="icon-btn" data-act="close" aria-label="Fermer">×</button></div>
+    <div class="steps" aria-hidden="true">${r.questions.map((_, i) => `<span class="${i <= r.q ? 'on' : ''}"></span>`).join('')}</div>
+    <div class="card">
+      <p class="eyebrow">${esc(d[2])}</p>
+      <p style="font-family:var(--font-display);font-size:22px;font-weight:800;line-height:1.15">${esc(cleanLabel(its[0].label))}</p>
+      <p class="meta">${its.map(x => esc(x.date.label) + ' · ' + fmt(x.v)).join(' · ')}${its.length > 1 ? ' · total ' + fmt(tot) : ''}</p>
+      <p class="meta">${esc(its[0].label.slice(0, 70))}</p>
+      <p>${esc(d[3])}</p>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        ${d[4].map(([v, l], j) => `<button class="btn${j ? ' light' : ''}" data-act="bank-answer" data-v="${v}">${esc(l)}</button>`).join('')}
+      </div>
+      <label class="meta" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="bk-remember" ${r.remember ? 'checked' : ''} style="width:18px;height:18px;accent-color:var(--accent)"> Retenir ma réponse pour les prochains relevés</label>
+    </div>
+    <button class="btn link" data-act="bank-skipq">Passer les questions</button>`);
+}
 function bankResult(){
-  const r = BANK, todo = r.items.filter(x => !x.noted), ok = r.items.filter(x => x.noted);
+  if (BANK.q < BANK.questions.length){ bankQuestion(); return; }
+  const r = BANK, todo = r.items.filter(x => !x.noted && !x.exclu), ok = r.items.filter(x => x.noted), exclu = r.items.filter(x => x.exclu);
   const opts = id => S.cfg.cats.map(k => `<option value="${esc(k.id)}"${k.id === id ? ' selected' : ''}>${esc(k.nom)}</option>`).join('');
   const n = todo.filter(x => x.pick).length, sum = todo.filter(x => x.pick).reduce((s, x) => s + x.v, 0);
   openModal(`
@@ -913,7 +964,7 @@ function bankResult(){
     <div class="card">
       <div class="bk-sum">
         <div><b class="num">${r.items.length}</b><span>dépenses lues</span></div>
-        <div><b class="num">${ok.length}</b><span>déjà notées</span></div>
+        <div><b class="num">${ok.length + exclu.length}</b><span>déjà notées ou pas des dépenses</span></div>
         <div><b class="num" style="color:${todo.length ? 'var(--bad)' : 'var(--good)'}">${todo.length}</b><span>oubliées ?</span></div>
       </div>
       ${r.other ? `<p class="meta">${r.other} opération(s) d’autres mois ignorée(s).</p>` : ''}
@@ -926,6 +977,7 @@ function bankResult(){
           <b class="num">${fmt(x.v)}</b>
           ${S.cfg.cats.length ? `<select data-bkcat="${x.i}" aria-label="Catégorie pour ${esc(x.nom)}">${opts(x.cat)}</select>` : ''}
         </div>`).join('')}</div>` : (r.items.length ? '<p>Tout est déjà noté, rien n’a été oublié.</p>' : '')}
+      ${exclu.length ? `<details class="bk-ok"><summary>Pas des dépenses (${exclu.length})</summary><ul>${exclu.map(x => `<li>${esc(x.date.label)} · ${esc(cleanLabel(x.label))} · ${fmt(x.v)}${x.auto ? ' · retenu de la dernière fois' : ''} <button class="btn link" style="padding:2px 4px;font-size:13px" data-act="bank-unexclude" data-i="${x.i}">C’est une dépense</button></li>`).join('')}</ul></details>` : ''}
       ${ok.length ? `<details class="bk-ok"><summary>Déjà notées (${ok.length})</summary><ul>${ok.map(x => `<li>${esc(x.date.label)} · ${esc(cleanLabel(x.label))} · ${fmt(x.v)} → ${esc(x.avec)}</li>`).join('')}</ul></details>` : ''}
     </div>
     <div class="actions">
@@ -1157,6 +1209,25 @@ document.addEventListener('click', e => {
     bankIntro(''); return;
   }
   if (act === 'bank-pick'){ bankEl.click(); return; }
+  if (act === 'bank-answer'){
+    const r = BANK, g = r.questions[r.q], v = b.dataset.v;
+    const rem = document.getElementById('bk-remember'); r.remember = !rem || rem.checked;
+    g.items.forEach(i => { const x = r.items.find(y => y.i === i); if (v === 'non'){ x.exclu = true; x.pick = false; } else { x.pick = true; } });
+    if (r.remember && g.key){
+      const cfg = clone(S.cfg); const R = cfg.releve = cfg.releve || {non: [], oui: []};
+      R.non = (R.non || []).filter(k => k !== g.key); R.oui = (R.oui || []).filter(k => k !== g.key);
+      (v === 'non' ? R.non : R.oui).push(g.key);
+      S.cfg = cfg; Docs.save('config', cfg);
+    }
+    r.q++; bankResult(); return;
+  }
+  if (act === 'bank-skipq'){ BANK.q = BANK.questions.length; bankResult(); return; }
+  if (act === 'bank-unexclude'){
+    const x = BANK.items.find(y => y.i === +b.dataset.i); if (!x) return;
+    x.exclu = false; x.auto = false; x.pick = true;
+    if (x.key && S.cfg.releve){ const cfg = clone(S.cfg); cfg.releve.non = (cfg.releve.non || []).filter(k => k !== x.key); S.cfg = cfg; Docs.save('config', cfg); }
+    bankResult(); return;
+  }
   if (act === 'bank-add'){
     const add = BANK.items.filter(x => !x.noted && x.pick && x.cat);
     if (!add.length) return;
@@ -1202,6 +1273,7 @@ document.addEventListener('click', e => {
   if (act === 'wz-save'){
     if (Object.values(W.amounts).some(v => Number.isNaN(v))){ document.getElementById('wz-msg').textContent = 'Un montant n’est pas un nombre. Écris par exemple 350 ou 7,99.'; return; }
     const cfg = wizardCfg();
+    if (S.cfg && S.cfg.releve) cfg.releve = S.cfg.releve;
     S.cfg = cfg; S.cfgLoaded = true; Docs.save('config', cfg);
     const first = !W.editing;
     W = null; S.view = 'main'; render(); window.scrollTo(0, 0);
