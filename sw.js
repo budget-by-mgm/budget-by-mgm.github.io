@@ -1,5 +1,5 @@
 // Appli budget : la page vient du réseau d'abord (dernière version), sinon de la copie locale.
-const CACHE = 'mgm-budget-2026.11.19-1551';
+const CACHE = 'mgm-budget-2026.11.19-1556';
 const FILES = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './icon-maskable-512.png', './apple-touch-icon.png'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES.map(f => new Request(f, {cache: 'reload'})))).then(() => self.skipWaiting()));

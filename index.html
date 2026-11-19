@@ -275,7 +275,7 @@ h1,h2,h3{font-family:var(--font-display);text-wrap:balance;margin:0}
 <div id="modal"></div>
 <div id="toast" class="toast" hidden></div>
 
-<script>window.__APP_VER__="2026.11.19-1551";</script>
+<script>window.__APP_VER__="2026.11.19-1556";</script>
 <script>
 (() => {
 "use strict";
@@ -1314,10 +1314,11 @@ function bankQuestion(){
       <p>${esc(d[3])}</p>
       <div style="display:flex;flex-direction:column;gap:8px">
         ${d[4].map(([v, l], j) => `<button class="btn${j ? ' light' : ''}" data-act="bank-answer" data-v="${v}">${esc(l)}</button>`).join('')}
+        <button class="btn light" data-act="bank-answer" data-v="sais-pas">Je ne sais pas, passer</button>
       </div>
       <label class="meta" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="bk-remember" ${r.remember ? 'checked' : ''} style="width:18px;height:18px;accent-color:var(--accent)"> Retenir ma réponse pour les prochains relevés</label>
     </div>
-    <button class="btn link" data-act="bank-skipq">Passer les questions</button>`);
+    ${r.questions.length - r.q > 1 ? `<button class="btn link" data-act="bank-skipq">Passer toutes les questions restantes (${r.questions.length - r.q})</button>` : ''}`);
 }
 function bankResult(){
   if (BANK.q < BANK.questions.length){ bankQuestion(); return; }
@@ -1348,7 +1349,7 @@ function bankResult(){
       <div class="bk-list">${todo.map(x => `
         <div class="bk-row">
           <input type="checkbox" id="bk-${x.i}" data-bk="${x.i}" ${x.pick ? 'checked' : ''} aria-label="Ajouter ${esc(x.nom)}">
-          <label class="l" for="bk-${x.i}">${esc(x.nom)}<small>${esc(x.date.label)} · ${esc(x.label.slice(0, 50))}</small></label>
+          <label class="l" for="bk-${x.i}">${esc(x.nom)}${x.doute ? ' <span class="pill" style="background:var(--warn-soft);color:var(--ink)">à vérifier</span>' : ''}<small>${esc(x.date.label)} · ${esc(x.label.slice(0, 50))}</small></label>
           <b class="num">${fmt(x.v)}</b>
           ${S.cfg.cats.length ? `<select data-bkcat="${x.i}" aria-label="Catégorie pour ${esc(x.nom)}">${opts(x.cat)}</select>` : ''}
         </div>`).join('')}</div>` : (r.items.length ? '<p>Tout est déjà noté, rien n’a été oublié.</p>' : '')}
@@ -1644,6 +1645,7 @@ document.addEventListener('click', e => {
   if (act === 'bank-answer'){
     const r = BANK, g = r.questions[r.q], v = b.dataset.v;
     const rem = document.getElementById('bk-remember'); r.remember = !rem || rem.checked;
+    if (v === 'sais-pas'){ g.items.forEach(i => { const x = r.items.find(y => y.i === i); x.pick = false; x.doute = true; }); r.q++; bankResult(); return; }
     g.items.forEach(i => { const x = r.items.find(y => y.i === i); if (v === 'non'){ x.exclu = true; x.pick = false; } else { x.pick = true; } });
     if (r.remember && g.key){
       const cfg = clone(S.cfg); const R = cfg.releve = cfg.releve || {non: [], oui: []};
@@ -1653,7 +1655,7 @@ document.addEventListener('click', e => {
     }
     r.q++; bankResult(); return;
   }
-  if (act === 'bank-skipq'){ BANK.q = BANK.questions.length; bankResult(); return; }
+  if (act === 'bank-skipq'){ BANK.questions.slice(BANK.q).forEach(g => g.items.forEach(i => { const x = BANK.items.find(y => y.i === i); x.pick = false; x.doute = true; })); BANK.q = BANK.questions.length; bankResult(); return; }
   if (act === 'bank-unexclude'){
     const x = BANK.items.find(y => y.i === +b.dataset.i); if (!x) return;
     x.exclu = false; x.auto = false; x.pick = true;
