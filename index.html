@@ -224,7 +224,14 @@ h1,h2,h3{font-family:var(--font-display);text-wrap:balance;margin:0}
 .qcats{display:flex;flex-wrap:wrap;gap:8px}
 .qtext{border:1px solid var(--line);background:var(--bg);border-radius:12px;padding:12px;font-size:16px;width:100%}
 /* abonnements */
-.abo-row{display:flex;align-items:center;gap:10px;padding:8px 0;border:0;background:none;width:100%;text-align:left;border-top:1px solid var(--line);min-height:52px}
+.abo-row{display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--line);min-height:52px}
+.abo-main{display:flex;align-items:center;gap:10px;border:0;background:none;flex:1;min-width:0;text-align:left;padding:0}
+.abo-row.off .abo-main{opacity:.5}
+.abo-row.off .abo-main b{text-decoration:line-through}
+.abo-tog{flex:none;border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:6px 10px;font-size:13px;font-weight:700;white-space:nowrap}
+.abo-row.off .abo-tog{background:var(--sub);border-color:var(--sub);color:var(--on-accent)}
+.check{display:flex;gap:10px;align-items:flex-start;font-size:15px}
+.check input{width:22px;height:22px;accent-color:var(--accent);flex:none;margin-top:1px}
 .abo-row:first-of-type{border-top:0}
 .abo-ic{width:36px;height:36px;border-radius:10px;background:var(--sub-soft);color:var(--sub);display:grid;place-items:center;font-weight:800;font-family:var(--font-display);flex:none}
 .abo-row .l{flex:1;min-width:0;font-weight:600}
@@ -327,7 +334,7 @@ textarea.qtext{min-height:110px;resize:vertical;font:inherit}
 <div id="modal"></div>
 <div id="toast" class="toast" hidden></div>
 
-<script>window.__APP_VER__="2026.11.19-1635";</script>
+<script>window.__APP_VER__="2026.11.19-1659";</script>
 <script>
 (() => {
 "use strict";
@@ -621,7 +628,7 @@ function totals(){
   let estime = false;
   const entrees = c.entrees.reduce((s, e) => { const r = m.entrees[e.id]; if (r == null) estime = true; return s + (r ?? e.prevu ?? 0); }, 0);
   const fixes = c.fixes.reduce((s, f) => s + (m.fixesReel[f.id] ?? f.prevu ?? 0), 0);
-  const abos = c.abos.reduce((s, a) => s + (a.montant || 0), 0);
+  const abos = c.abos.filter(a => aboActive(a, m)).reduce((s, a) => s + (a.montant || 0), 0);
   const catIds = new Set(c.cats.map(k => k.id));
   const depenses = (m.depenses || []).filter(d => catIds.has(d.cat)).reduce((s, d) => s + (d.montant || 0), 0);
   const dispo = entrees - fixes - abos;
@@ -865,20 +872,36 @@ function nextDebit(jour){
   if (d < n) d = mk(n.getFullYear(), n.getMonth() + 1);
   return Math.round((d - n) / 864e5);
 }
+function aboActive(a, m){
+  m = m || mon();
+  if (a.occasionnel) return (m.abosOn || []).includes(a.id);
+  return !(m.abosPause || []).includes(a.id);
+}
 function aboCard(c, t){
   if (!c.abos.length) return `<section class="sec" style="--c:var(--sub)"><div class="sec-h"><h2>Abonnements</h2></div><p class="empty">Aucun abonnement. <button class="btn link" style="padding:0" data-act="edit-cats">En ajouter</button></p></section>`;
-  const list = c.abos.map(a => ({...a, dans: nextDebit(a.jour)})).sort((x, y) => (x.dans ?? 99) - (y.dans ?? 99));
-  const when = d => d == null ? 'Touche pour ajouter le jour du prélèvement' : d === 0 ? '<span class="soon">Prélevé aujourd’hui</span>' : d === 1 ? '<span class="soon">Prélevé demain</span>' : d <= 5 ? `<span class="soon">Prélevé dans ${d} jours</span>` : `Prélevé dans ${d} jours`;
+  const m = mon(), mois = monthLabel(S.monKey, false).toLowerCase();
+  const list = c.abos.map(a => ({...a, on: aboActive(a, m), dans: nextDebit(a.jour)})).sort((x, y) => (y.on - x.on) || ((x.dans ?? 99) - (y.dans ?? 99)));
+  const when = a => {
+    if (!a.on) return a.occasionnel ? 'Pas tous les mois · pas pris en ' + esc(mois) : 'En pause en ' + esc(mois);
+    const d = a.dans, lab = a.occasionnel ? 'Pris en ' + esc(mois) + ' · ' : '';
+    if (S.monKey !== CUR) return lab + (a.jour ? 'Le ' + a.jour + ' du mois' : 'Actif');
+    return lab + (d == null ? 'Touche pour ajouter le jour du prélèvement' : (a.jour ? 'Le ' + a.jour + ' · ' : '') + (d === 0 ? '<span class="soon">Prélevé aujourd’hui</span>' : d === 1 ? '<span class="soon">Prélevé demain</span>' : d <= 5 ? `<span class="soon">Prélevé dans ${d} jours</span>` : `Prélevé dans ${d} jours`));
+  };
+  const yearly = c.abos.filter(a => !a.occasionnel).reduce((s2, a) => s2 + (a.montant || 0), 0) * 12;
+  const occ = c.abos.filter(a => a.occasionnel).length;
   return `
     <section class="sec" style="--c:var(--sub)" aria-labelledby="h-abo">
-      <div class="sec-h"><h2 id="h-abo">Abonnements</h2><span class="tot num">${fmt(t.abos)}<small style="font-size:12px;color:var(--muted)"> /mois</small></span></div>
-      <div class="abo-year"><span>Sur un an, tes abonnements te coûtent</span><b class="num">${fmt(t.abos * 12)}</b></div>
+      <div class="sec-h"><h2 id="h-abo">Abonnements</h2><span class="tot num">${fmt(t.abos)}<small style="font-size:12px;color:var(--muted)"> en ${esc(mois)}</small></span></div>
+      <div class="abo-year"><span>Sur un an, tes abonnements te coûtent${occ ? ' (sans ceux pris de temps en temps)' : ''}</span><b class="num">${fmt(yearly)}</b></div>
       ${list.map(a => `
-        <button class="abo-row" data-act="abo-edit" data-id="${esc(a.id)}">
-          <span class="abo-ic" aria-hidden="true">${esc((a.nom || '?').charAt(0).toUpperCase())}</span>
-          <span class="l">${esc(a.nom)}<small>${a.jour ? 'Le ' + a.jour + ' du mois · ' : ''}${when(a.dans)}</small></span>
-          <b class="num">${fmt(a.montant)}</b>
-        </button>`).join('')}
+        <div class="abo-row${a.on ? '' : ' off'}">
+          <button class="abo-main" data-act="abo-edit" data-id="${esc(a.id)}">
+            <span class="abo-ic" aria-hidden="true">${esc((a.nom || '?').charAt(0).toUpperCase())}</span>
+            <span class="l">${esc(a.nom)}<small>${when(a)}</small></span>
+            <b class="num">${fmt(a.montant)}</b>
+          </button>
+          <button class="abo-tog" data-act="abo-toggle" data-id="${esc(a.id)}" aria-pressed="${!a.on}" aria-label="${a.on ? 'Mettre ' + esc(a.nom) + ' en pause ce mois-ci' : 'Activer ' + esc(a.nom) + ' ce mois-ci'}">${a.on ? '⏸ Pause' : '▶ Activer'}</button>
+        </div>`).join('')}
     </section>`;
 }
 function aboEdit(id){
@@ -887,6 +910,7 @@ function aboEdit(id){
     <div class="sheet-h"><h2>${esc(a.nom)}</h2><button class="icon-btn" data-act="close" aria-label="Fermer">×</button></div>
     <form class="card" id="abo-form" data-id="${esc(a.id)}">
       <div class="field"><label for="abo-amt">Prix par mois</label><input id="abo-amt" inputmode="decimal" value="${esc(amtVal(a.montant))}"></div>
+      <label class="check"><input type="checkbox" id="abo-occ" ${a.occasionnel ? 'checked' : ''}><span><b>Pas tous les mois</b><br><small class="meta">Pour ceux que tu prends seulement quand tu en as besoin (PS Plus, Game Pass…). Il ne compte que les mois où tu l’actives.</small></span></label>
       <div class="field"><label for="abo-day">Jour du prélèvement (1 à 31)</label><input id="abo-day" inputmode="numeric" maxlength="2" value="${a.jour || ''}" placeholder="ex. 12"><small>Pour savoir quand il sera prélevé. Rempli tout seul quand tu analyses un relevé.</small></div>
       <p class="msg" id="abo-msg"></p>
       <div class="actions"><button class="btn" type="submit" style="flex:1">Enregistrer</button><button class="btn light" type="button" data-act="abo-del" data-id="${esc(a.id)}">Supprimer</button></div>
@@ -1190,7 +1214,7 @@ modalEl.addEventListener('submit', e => {
     const amt = parseAmt(document.getElementById('abo-amt').value), dayS = document.getElementById('abo-day').value.trim(), day = dayS ? parseInt(dayS, 10) : null;
     if (amt == null || Number.isNaN(amt)){ document.getElementById('abo-msg').textContent = 'Écris un prix, par exemple 13,49.'; return; }
     if (dayS && !(day >= 1 && day <= 31)){ document.getElementById('abo-msg').textContent = 'Le jour doit être entre 1 et 31.'; return; }
-    const cfg = clone(S.cfg); const a = cfg.abos.find(x => x.id === f.dataset.id); a.montant = amt; if (day) a.jour = day; else delete a.jour;
+    const cfg = clone(S.cfg); const a = cfg.abos.find(x => x.id === f.dataset.id); a.montant = amt; if (day) a.jour = day; else delete a.jour; if (document.getElementById('abo-occ').checked) a.occasionnel = true; else delete a.occasionnel;
     saveCfg(cfg); closeModal(); render(); toast('Abonnement mis à jour'); return;
   }
   if (f.id === 'pin-form'){ e.preventDefault(); return; }
@@ -1751,6 +1775,7 @@ function bankResult(){
         <div><b class="num">${ok.length + exclu.length}</b><span>déjà notées ou pas des dépenses</span></div>
         <div><b class="num" style="color:${todo.length ? 'var(--bad)' : 'var(--good)'}">${todo.length}</b><span>oubliées ?</span></div>
       </div>
+      ${r.activated && r.activated.length ? `<p class="warn" style="background:var(--sub-soft)">Payé ce mois-ci d’après ton relevé, donc activé : <b>${r.activated.map(esc).join(', ')}</b>.</p>` : ''}
       <p class="meta">${BANK_FILES.length} relevé${BANK_FILES.length > 1 ? 's' : ''} lu${BANK_FILES.length > 1 ? 's' : ''} : ${BANK_FILES.map(esc).join(', ')}</p>
       ${BANK_FAILS.length ? `<p class="warn">Pas réussi à lire : ${BANK_FAILS.map(esc).join(', ')}. Essaie le format CSV pour ${BANK_FAILS.length > 1 ? 'ceux-là' : 'celui-là'}.</p>` : ''}
       ${r.other ? `<p class="meta">${r.other} opération(s) d’autres mois ignorée(s).</p>` : ''}
@@ -1790,6 +1815,12 @@ async function runBank(month){
   BANK = analyseBank(BANK_OPS);
   BANK.month = month;
   const days = {}; BANK.items.forEach(x => { if (x.abo) days[x.abo] = +x.date.label.slice(0, 2); });
+  const paid = S.cfg.abos.filter(a => days[a.id] && !aboActive(a));
+  if (paid.length){
+    const m = clone(mon()); m.abosOn = m.abosOn || []; m.abosPause = m.abosPause || [];
+    paid.forEach(a => { if (a.occasionnel) m.abosOn.push(a.id); else m.abosPause = m.abosPause.filter(i => i !== a.id); });
+    saveMon(m); BANK.activated = paid.map(a => a.nom);
+  }
   if (Object.keys(days).length && S.cfg.abos.some(a => days[a.id] && !a.jour)){
     const cfg = clone(S.cfg); cfg.abos.forEach(a => { if (days[a.id] && !a.jour) a.jour = days[a.id]; }); saveCfg(cfg);
   }
@@ -2045,6 +2076,14 @@ document.addEventListener('click', e => {
   if (act === 'search') return openSearch();
   if (act === 's-go'){ closeModal(); S.panel = 'c-' + b.dataset.cat; if (b.dataset.k !== S.monKey) goMonth(b.dataset.k); else render(); return; }
   if (act === 'abo-edit') return aboEdit(b.dataset.id);
+  if (act === 'abo-toggle'){
+    const a = S.cfg.abos.find(x => x.id === b.dataset.id); if (!a) return;
+    const m = clone(mon()); m.abosOn = m.abosOn || []; m.abosPause = m.abosPause || [];
+    const on = aboActive(a, m);
+    if (a.occasionnel){ m.abosOn = on ? m.abosOn.filter(i => i !== a.id) : [...m.abosOn, a.id]; }
+    else { m.abosPause = on ? [...m.abosPause, a.id] : m.abosPause.filter(i => i !== a.id); }
+    saveMon(m); toast(a.nom + (on ? ' en pause en ' : ' activé en ') + monthLabel(S.monKey, false).toLowerCase()); return;
+  }
   if (act === 'abo-del'){ const cfg = clone(S.cfg); cfg.abos = cfg.abos.filter(a => a.id !== b.dataset.id); saveCfg(cfg); closeModal(); render(); toast('Abonnement supprimé'); return; }
   if (act === 'lock-settings'){ openLockSettings(); return; }
   if (act === 'pin'){
